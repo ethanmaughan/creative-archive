@@ -7,12 +7,17 @@
  * contain multiple statements — `exec` is expected to run them all.
  */
 
+/** Values bindable to a parameterized statement. */
+export type SqlValue = string | number | null
+
 /** The narrow database port the index layer depends on. */
 export interface Sqlite {
-  /** Execute one or more SQL statements. */
+  /** Execute one or more SQL statements (no parameters) — used for migrations. */
   exec(sql: string): void
-  /** Run a query and return rows as plain objects. */
-  selectRows<T = Record<string, unknown>>(sql: string): T[]
+  /** Execute a single parameterized statement. */
+  run(sql: string, params?: readonly SqlValue[]): void
+  /** Run a (optionally parameterized) query and return rows as plain objects. */
+  selectRows<T = Record<string, unknown>>(sql: string, params?: readonly SqlValue[]): T[]
   close(): void
 }
 
@@ -27,10 +32,6 @@ export interface MigrationResult {
 }
 
 const MIGRATIONS_TABLE = '__migrations'
-
-function escapeLiteral(value: string): string {
-  return value.replace(/'/g, "''")
-}
 
 export function applyMigrations(
   db: Sqlite,
@@ -57,11 +58,10 @@ export function applyMigrations(
     db.exec('BEGIN;')
     try {
       db.exec(migration.sql)
-      db.exec(
-        `INSERT INTO ${MIGRATIONS_TABLE} (name, applied_at) VALUES ('${escapeLiteral(
-          migration.name,
-        )}', '${escapeLiteral(now())}');`,
-      )
+      db.run(`INSERT INTO ${MIGRATIONS_TABLE} (name, applied_at) VALUES (?, ?);`, [
+        migration.name,
+        now(),
+      ])
       db.exec('COMMIT;')
     } catch (error) {
       db.exec('ROLLBACK;')

@@ -46,7 +46,7 @@ describe('sqlite-index migrations', () => {
   it('is idempotent — re-applying reports nothing new', () => {
     const result = applyMigrations(db, MIGRATIONS)
     expect(result.applied).toEqual([])
-    expect(result.alreadyApplied).toEqual(['0000_init', '0001_fts_and_triggers'])
+    expect(result.alreadyApplied).toEqual(MIGRATIONS.map((m) => m.name))
   })
 
   it('enforces foreign keys (document -> missing workspace is rejected)', () => {

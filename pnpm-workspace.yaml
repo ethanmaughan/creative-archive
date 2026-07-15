@@ -1,0 +1,9 @@
+# esbuild ships a prebuilt platform binary; approve its (harmless) build script so pnpm
+# stops flagging it as an ignored build.
+allowBuilds:
+  esbuild: true
+
+# pnpm 11 runs an install "dep-status" precheck before every `pnpm run`/`pnpm exec`.
+# Keep it off so tooling never blocks on transient install-state noise; deps are managed
+# explicitly via `pnpm install`.
+verifyDepsBeforeRun: false

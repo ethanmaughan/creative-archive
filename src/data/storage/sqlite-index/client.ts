@@ -3,20 +3,27 @@
  *
  * Two open modes behind one `Sqlite` port:
  *   - `openOpfs`   — persistent, backed by the OPFS **SAHPool** VFS. Chosen because it
- *                    does NOT require COOP/COEP cross-origin isolation and runs on the
- *                    main thread. This is the app's real store.
+ *                    does NOT require COOP/COEP cross-origin isolation. Must run inside a
+ *                    Worker (createSyncAccessHandle is Worker-only). This is the app's real store.
  *   - `openInMemory` — transient; used by tests and ephemeral work.
  *
  * WAL is intentionally NOT enabled (design override): the SAHPool VFS is single-connection
  * synchronous, so WAL buys nothing on this target. `foreign_keys` is enabled per connection.
  */
 import sqlite3InitModule from '@sqlite.org/sqlite-wasm'
-import type { Sqlite } from './migrator'
+import type { Sqlite, SqlValue } from './migrator'
+
+/** Options form of the sqlite-wasm oo1 `DB.exec` call. */
+interface ExecOptions {
+  sql: string
+  bind?: readonly SqlValue[]
+  rowMode?: 'object'
+  returnValue?: 'resultRows'
+}
 
 /** The subset of the sqlite-wasm oo1 DB surface we rely on. */
 interface Oo1Db {
-  exec(sql: string): void
-  selectObjects(sql: string): Array<Record<string, unknown>>
+  exec(sqlOrOptions: string | ExecOptions): unknown
   close(): void
 }
 
@@ -36,8 +43,17 @@ class WasmSqlite implements Sqlite {
     this.db.exec(sql)
   }
 
-  selectRows<T = Record<string, unknown>>(sql: string): T[] {
-    return this.db.selectObjects(sql) as T[]
+  run(sql: string, params: readonly SqlValue[] = []): void {
+    this.db.exec({ sql, bind: params })
+  }
+
+  selectRows<T = Record<string, unknown>>(sql: string, params: readonly SqlValue[] = []): T[] {
+    return this.db.exec({
+      sql,
+      bind: params,
+      rowMode: 'object',
+      returnValue: 'resultRows',
+    }) as T[]
   }
 
   close(): void {
@@ -60,7 +76,7 @@ export async function openInMemory(): Promise<Sqlite> {
   return new WasmSqlite(db)
 }
 
-/** Persistent database in the browser's OPFS via the SAHPool VFS. Browser-only. */
+/** Persistent database in the browser's OPFS via the SAHPool VFS. Worker context only. */
 export async function openOpfs(filename = 'creative-archive.sqlite'): Promise<Sqlite> {
   const sqlite3 = await loadModule()
   const poolUtil = await sqlite3.installOpfsSAHPoolVfs({ name: 'creative-archive' })
