@@ -3,6 +3,7 @@ node_modules/
 dist/
 dist-ssr/
 coverage/
+*.tsbuildinfo
 # test artifacts
 playwright-report/
 test-results/
