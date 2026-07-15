@@ -1,0 +1,17 @@
+# dependencies / build output
+node_modules/
+dist/
+dist-ssr/
+coverage/
+# test artifacts
+playwright-report/
+test-results/
+# tauri (dormant until its phase)
+src-tauri/target/
+# local / editor / os
+*.local
+*.log
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

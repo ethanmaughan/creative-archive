@@ -1,0 +1,6 @@
+[tools]
+node = "24.18.0"
+
+[env]
+# Project uses corepack-managed pnpm pinned via package.json "packageManager"
+COREPACK_ENABLE_DOWNLOAD_PROMPT = "0"
