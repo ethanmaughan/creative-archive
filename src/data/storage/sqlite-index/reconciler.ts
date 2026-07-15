@@ -19,19 +19,14 @@ import {
   serializeFrontmatter,
   type Frontmatter,
 } from '../file-store/frontmatter'
+import {
+  WORKSPACE_DEFS,
+  classifyKind,
+  isIndexablePath,
+  workspaceForPath,
+} from '@/domain/models/workspace'
 import { hashText } from './content-hash'
 import type { Sqlite } from './migrator'
-
-export type DocumentKind =
-  | 'manuscript'
-  | 'scene'
-  | 'note'
-  | 'world-rule'
-  | 'character'
-  | 'location'
-  | 'research'
-  | 'library-item'
-  | 'document'
 
 export interface ReconcileOptions {
   /** Wipe derived tables and rebuild from scratch. */
@@ -47,60 +42,9 @@ export interface ReconcileResult {
   readonly unchanged: number
 }
 
-interface WorkspaceDef {
-  readonly id: string
-  readonly name: string
-  readonly relPath: string
-  readonly protection: 'canonical' | 'writable'
-}
-
-const WORKSPACES: readonly WorkspaceDef[] = [
-  { id: 'ws-projects', name: 'Projects', relPath: 'projects', protection: 'canonical' },
-  { id: 'ws-story-bible', name: 'Story Bible', relPath: 'story-bible', protection: 'canonical' },
-  { id: 'ws-library', name: 'Library', relPath: 'library', protection: 'canonical' },
-  { id: 'ws-research', name: 'Research', relPath: 'research', protection: 'canonical' },
-  { id: 'ws-workspaces', name: 'AI Workspaces', relPath: 'workspaces', protection: 'writable' },
-]
-
-const WORKSPACE_BY_TOP = new Map(WORKSPACES.map((w) => [w.relPath, w]))
-
-function topSegment(relPath: string): string {
-  return relPath.split('/')[0] ?? ''
-}
-
 function basename(relPath: string): string {
   const name = relPath.split('/').pop() ?? relPath
   return name.replace(/\.md$/i, '')
-}
-
-/** A canonical, indexable document: a Markdown file inside a known workspace. */
-function isIndexable(relPath: string): boolean {
-  if (!relPath.toLowerCase().endsWith('.md')) return false
-  if (relPath.startsWith('.creative-archive/')) return false
-  return WORKSPACE_BY_TOP.has(topSegment(relPath))
-}
-
-function classifyKind(relPath: string): DocumentKind {
-  if (relPath.startsWith('library/')) return 'library-item'
-  if (relPath.startsWith('story-bible/characters/')) return 'character'
-  if (relPath.startsWith('story-bible/locations/')) return 'location'
-  if (relPath.startsWith('research/')) return 'research'
-  const inProject = /^projects\/[^/]+\/([^/]+)\//.exec(relPath)
-  if (inProject) {
-    switch (inProject[1]) {
-      case 'manuscript':
-        return 'manuscript'
-      case 'scenes':
-        return 'scene'
-      case 'notes':
-        return 'note'
-      case 'world-rules':
-        return 'world-rule'
-      default:
-        return 'document'
-    }
-  }
-  return 'document'
 }
 
 function extractTags(data: Frontmatter): string {
@@ -116,7 +60,7 @@ function titleFor(data: Frontmatter, relPath: string): string {
 }
 
 function ensureWorkspaces(db: Sqlite, now: () => string): void {
-  for (const w of WORKSPACES) {
+  for (const w of WORKSPACE_DEFS) {
     db.run(
       `INSERT OR IGNORE INTO workspaces (id, name, rel_path, protection, created_at)
        VALUES (?, ?, ?, ?, ?);`,
@@ -174,7 +118,7 @@ export async function reconcile(
   for await (const entry of fileStore.list()) {
     if (entry.kind !== 'file') continue
     const relPath = normalizeRelPath(entry.relPath)
-    if (!isIndexable(relPath)) continue
+    if (!isIndexablePath(relPath)) continue
 
     const raw = await fileStore.readTextFile(relPath)
     const parsed = parseFrontmatter(raw)
@@ -190,7 +134,7 @@ export async function reconcile(
     seen.add(id)
     const contentHash = await hashText(effectiveRaw)
     const kind = classifyKind(relPath)
-    const workspaceId = WORKSPACE_BY_TOP.get(topSegment(relPath))?.id ?? null
+    const workspaceId = workspaceForPath(relPath)?.id ?? null
     const title = titleFor(ensured.data, relPath)
     const tags = extractTags(ensured.data)
     const frontmatterJson = JSON.stringify(ensured.data)
