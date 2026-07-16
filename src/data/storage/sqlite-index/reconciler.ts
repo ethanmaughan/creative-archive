@@ -26,6 +26,7 @@ import {
   workspaceForPath,
 } from '@/domain/models/workspace'
 import { MEDIA_TYPES, type DocumentKind } from '@/domain/models/document'
+import { parseFacets } from '@/domain/services/parse-facets'
 import { hashText } from './content-hash'
 import type { Sqlite } from './migrator'
 
@@ -139,6 +140,7 @@ async function indexOneFile(
     )
     writeFts(db, rowidFor(db, id), title, parsed.body, tags)
     syncLibraryProjection(db, kind, id, ensured.data)
+    syncExtractionFacets(db, kind, id, parsed.body)
     return { id, outcome: 'inserted' }
   }
   if (existing.content_hash !== contentHash || existing.rel_path !== relPath) {
@@ -152,6 +154,7 @@ async function indexOneFile(
     db.run('DELETE FROM documents_fts WHERE rowid = ?;', [existing.rowid])
     writeFts(db, existing.rowid, title, parsed.body, tags)
     syncLibraryProjection(db, kind, id, ensured.data)
+    syncExtractionFacets(db, kind, id, parsed.body)
     return { id, outcome: 'updated' }
   }
   return { id, outcome: 'unchanged' }
@@ -195,6 +198,26 @@ function syncLibraryProjection(
        consumed_on = excluded.consumed_on, rating = excluded.rating;`,
     [documentId, mediaType as string, creator, year, consumedOn, rating],
   )
+}
+
+/** Keep the queryable `extraction_facets` projection in sync with a library item's body
+ *  sections. Fully replaced each index; only library items have facets. */
+function syncExtractionFacets(
+  db: Sqlite,
+  kind: DocumentKind,
+  documentId: string,
+  body: string,
+): void {
+  db.run('DELETE FROM extraction_facets WHERE document_id = ?;', [documentId])
+  if (kind !== 'library-item') return
+  parseFacets(body).forEach((facet, index) => {
+    db.run('INSERT INTO extraction_facets (id, document_id, facet, content) VALUES (?, ?, ?, ?);', [
+      `${documentId}::${facet.facet}::${index}`,
+      documentId,
+      facet.facet,
+      facet.content,
+    ])
+  })
 }
 
 export async function reconcile(

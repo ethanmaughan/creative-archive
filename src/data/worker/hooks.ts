@@ -12,6 +12,7 @@ import type {
   CreateLibraryItemInput,
   DocumentContent,
   DocumentDTO,
+  FacetDTO,
   LibraryItemDTO,
 } from './types'
 
@@ -95,5 +96,14 @@ export function useCreateLibraryItem(): UseMutationResult<
       void queryClient.invalidateQueries({ queryKey: ['library'] })
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
     },
+  })
+}
+
+export function useFacets(facet: string | null): UseQueryResult<FacetDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['facets', facet],
+    queryFn: () => getDataClient().listFacets(facet ?? undefined),
+    enabled: ready,
   })
 }
