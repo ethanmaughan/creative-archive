@@ -9,6 +9,15 @@ export interface DocumentDTO {
   readonly workspaceId: string | null
 }
 
+/** A search hit with a body excerpt for display. */
+export interface SearchResultDTO {
+  readonly id: string
+  readonly relPath: string
+  readonly title: string | null
+  readonly kind: string
+  readonly snippet: string
+}
+
 export interface OpenResult {
   readonly docCount: number
   readonly inserted: number
@@ -90,7 +99,8 @@ export interface DataApi {
   /** Re-run the reconciler against the currently open archive. */
   reconcile(): Promise<OpenResult>
   listDocuments(): Promise<DocumentDTO[]>
-  search(query: string): Promise<DocumentDTO[]>
+  /** Full-text search with body snippets, optionally filtered by document kind. */
+  search(query: string, kind?: string): Promise<SearchResultDTO[]>
   /** Read a document's content (frontmatter + body), or null if missing. */
   readDocument(relPath: string): Promise<DocumentContent | null>
   /** Write a document's body (and optionally title) back to its file, then re-index it. */

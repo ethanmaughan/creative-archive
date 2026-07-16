@@ -22,7 +22,7 @@ import { ConnectionRepository } from '@/data/repositories/connection-repository'
 import { classifyKind } from '@/domain/models/workspace'
 import { validateConnection } from '@/domain/services/connection-rules'
 import { slugify } from '@/shared/slug'
-import { toFtsQuery } from './fts-query'
+import { buildSnippet, queryTerms, toFtsQuery } from './fts-query'
 import type {
   CreatableKind,
   CreateDocumentInput,
@@ -33,6 +33,7 @@ import type {
   DocumentDTO,
   OpenResult,
   SaveDocumentPatch,
+  SearchResultDTO,
 } from './types'
 
 let db: Sqlite | null = null
@@ -109,11 +110,30 @@ const api: DataApi = {
     return documents ? documents.all().map(toDto) : []
   },
 
-  async search(query) {
-    if (!documents) return []
+  async search(query: string, kind?: string) {
+    if (!documents || !store) return []
     const fts = toFtsQuery(query)
     if (fts === '') return []
-    return documents.search(fts).map(toDto)
+    const hits = documents.search(fts, { limit: 20, ...(kind !== undefined ? { kind } : {}) })
+    const terms = queryTerms(query)
+    const results: SearchResultDTO[] = []
+    for (const hit of hits) {
+      let snippet = ''
+      try {
+        const raw = await store.readTextFile(hit.relPath)
+        snippet = buildSnippet(parseFrontmatter(raw).body, terms)
+      } catch {
+        // File may have vanished between indexing and reading; show the hit without a snippet.
+      }
+      results.push({
+        id: hit.id,
+        relPath: hit.relPath,
+        title: hit.title,
+        kind: hit.kind,
+        snippet,
+      })
+    }
+    return results
   },
 
   async readDocument(relPath) {

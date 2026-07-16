@@ -56,19 +56,23 @@ export class DocumentRepository {
       .map(toRecord)
   }
 
-  /** Full-text search over the FTS index, best matches first. */
-  search(query: string, limit = 20): DocumentRecord[] {
+  /** Full-text search over the FTS index, best matches first. Optionally filtered by kind. */
+  search(query: string, options: { limit?: number; kind?: string } = {}): DocumentRecord[] {
+    const limit = options.limit ?? 20
+    const cols = COLUMNS.split(', ')
+      .map((c) => `d.${c}`)
+      .join(', ')
+    const kindClause = options.kind !== undefined ? 'AND d.kind = ?' : ''
+    const params = options.kind !== undefined ? [query, options.kind, limit] : [query, limit]
     return this.db
       .selectRows<DocumentRow>(
-        `SELECT ${COLUMNS.split(', ')
-          .map((c) => `d.${c}`)
-          .join(', ')}
+        `SELECT ${cols}
            FROM documents_fts f
            JOIN documents d ON d.rowid = f.rowid
-          WHERE documents_fts MATCH ?
+          WHERE documents_fts MATCH ? ${kindClause}
           ORDER BY rank
           LIMIT ?;`,
-        [query, limit],
+        params,
       )
       .map(toRecord)
   }
