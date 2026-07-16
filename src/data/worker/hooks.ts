@@ -16,6 +16,7 @@ import type {
   DocumentDTO,
   FacetDTO,
   LibraryItemDTO,
+  SearchResultDTO,
 } from './types'
 
 export function useDocuments(): UseQueryResult<DocumentDTO[]> {
@@ -27,12 +28,12 @@ export function useDocuments(): UseQueryResult<DocumentDTO[]> {
   })
 }
 
-export function useSearch(query: string): UseQueryResult<DocumentDTO[]> {
+export function useSearch(query: string, kind: string | null): UseQueryResult<SearchResultDTO[]> {
   const ready = useSession((s) => s.status === 'ready')
   const trimmed = query.trim()
   return useQuery({
-    queryKey: ['search', trimmed],
-    queryFn: () => getDataClient().search(trimmed),
+    queryKey: ['search', trimmed, kind],
+    queryFn: () => getDataClient().search(trimmed, kind ?? undefined),
     enabled: ready && trimmed.length > 0,
   })
 }
