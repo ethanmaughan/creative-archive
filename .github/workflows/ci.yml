@@ -9,24 +9,22 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # corepack must not prompt to download the pinned pnpm in CI.
-  COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'
-
 jobs:
   gates:
     name: typecheck · lint · unit · e2e
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+
+      # Install the pnpm pinned in package.json's "packageManager" field, before
+      # setup-node — so setup-node can resolve it (and cache its store).
+      - uses: pnpm/action-setup@v4
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '24'
-
-      - name: Enable corepack (pnpm pinned via packageManager)
-        run: corepack enable
+          cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
