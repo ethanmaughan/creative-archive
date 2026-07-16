@@ -1,5 +1,7 @@
 /** The typed contract between the UI (main thread) and the data worker. */
 import type { MediaType } from '@/domain/models/document'
+import type { MarketKind } from '@/domain/models/market'
+import type { SubmissionStatus } from '@/domain/models/submission'
 
 export interface DocumentDTO {
   readonly id: string
@@ -103,6 +105,49 @@ export interface AiRunResultDTO {
   readonly content: string
 }
 
+/** Query Tracker DTOs. */
+export interface MarketDTO {
+  readonly id: string
+  readonly kind: string
+  readonly name: string
+}
+
+export interface SubmissionDTO {
+  readonly id: string
+  readonly title: string
+  readonly status: string
+  readonly marketId: string
+  readonly marketName: string | null
+  readonly marketKind: string | null
+  readonly documentId: string | null
+  readonly documentTitle: string | null
+  readonly manuscriptRev: string | null
+  readonly submittedOn: string | null
+  readonly deadlineOn: string | null
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+
+export interface SubmissionEventDTO {
+  readonly id: string
+  readonly kind: string
+  readonly status: string | null
+  readonly body: string | null
+  readonly occurredOn: string
+}
+
+export interface CreateMarketInput {
+  readonly kind: MarketKind
+  readonly name: string
+}
+
+export interface CreateSubmissionInput {
+  readonly title: string
+  readonly marketId: string
+  readonly documentId?: string
+  readonly manuscriptRev?: string
+}
+
 export interface DataApi {
   /** Open an archive folder: opens/creates the OPFS index, runs migrations, reconciles. */
   openArchive(handle: FileSystemDirectoryHandle): Promise<OpenResult>
@@ -136,5 +181,15 @@ export interface DataApi {
   summarizeDocument(relPath: string, model: string): Promise<AiRunResultDTO>
   /** Check the story bible for inconsistencies; writes findings into a writable workspace. */
   checkConsistency(model: string): Promise<AiRunResultDTO>
+  // Query Tracker
+  listMarkets(): Promise<MarketDTO[]>
+  createMarket(input: CreateMarketInput): Promise<void>
+  listSubmissions(): Promise<SubmissionDTO[]>
+  createSubmission(input: CreateSubmissionInput): Promise<void>
+  /** Transition a submission's status (validated against the state machine). */
+  transitionSubmission(id: string, to: SubmissionStatus): Promise<void>
+  listSubmissionEvents(submissionId: string): Promise<SubmissionEventDTO[]>
+  exportSubmissionsCsv(): Promise<string>
+  exportSubmissionsJson(): Promise<string>
   isOpen(): Promise<boolean>
 }

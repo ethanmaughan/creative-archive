@@ -3,8 +3,8 @@ import { StudioPage } from '@/features/studio/StudioPage'
 import { DocumentView } from '@/features/studio/DocumentView'
 import { LibraryPage } from '@/features/library/LibraryPage'
 import { ConnectionsPage } from '@/features/connections/ConnectionsPage'
+import { QueryTrackerPage } from '@/features/query-tracker/QueryTrackerPage'
 import { SearchPage } from '@/features/search/SearchPage'
-import { ComingSoon } from '@/shared/ui/ComingSoon'
 import { Shell } from './Shell'
 
 export const router = createBrowserRouter([
@@ -16,7 +16,7 @@ export const router = createBrowserRouter([
       { path: 'doc/*', element: <DocumentView /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'connections', element: <ConnectionsPage /> },
-      { path: 'query-tracker', element: <ComingSoon title="Query Tracker" phase="Phase 12" /> },
+      { path: 'query-tracker', element: <QueryTrackerPage /> },
       { path: 'search', element: <SearchPage /> },
     ],
   },
