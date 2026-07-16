@@ -1,4 +1,5 @@
 /** The typed contract between the UI (main thread) and the data worker. */
+import type { MediaType } from '@/domain/models/document'
 
 export interface DocumentDTO {
   readonly id: string
@@ -37,6 +38,25 @@ export interface SaveDocumentPatch {
   readonly title?: string
 }
 
+/** Typed library projection row (media metadata joined to its document). */
+export interface LibraryItemDTO {
+  readonly id: string
+  readonly relPath: string
+  readonly title: string | null
+  readonly mediaType: string
+  readonly creator: string | null
+  readonly year: number | null
+  readonly rating: number | null
+}
+
+export interface CreateLibraryItemInput {
+  readonly mediaType: MediaType
+  readonly title: string
+  readonly creator?: string
+  readonly year?: number
+  readonly rating?: number
+}
+
 export interface DataApi {
   /** Open an archive folder: opens/creates the OPFS index, runs migrations, reconciles. */
   openArchive(handle: FileSystemDirectoryHandle): Promise<OpenResult>
@@ -50,5 +70,9 @@ export interface DataApi {
   saveDocument(relPath: string, patch: SaveDocumentPatch): Promise<DocumentContent>
   /** Create a new document with a fresh UUID in the folder for its kind. */
   createDocument(input: CreateDocumentInput): Promise<DocumentContent>
+  /** List typed library items (from the library_items projection). */
+  listLibraryItems(): Promise<LibraryItemDTO[]>
+  /** Create a new library item file with media metadata in its frontmatter. */
+  createLibraryItem(input: CreateLibraryItemInput): Promise<DocumentContent>
   isOpen(): Promise<boolean>
 }

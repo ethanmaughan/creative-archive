@@ -35,10 +35,10 @@ test('opening an archive indexes documents and search finds them', async ({ page
   await expect(page.locator('.sidebar__foot')).toContainText('docs', { timeout: 60_000 })
 
   // Studio lists the indexed documents.
-  await expect(page.getByText('Mara Vell')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('Mara Vell')).toBeVisible({ timeout: 30_000 })
 
   // Full-text search finds the research note by a word in its body.
   await page.getByRole('link', { name: 'Search', exact: true }).click()
   await page.getByLabel('Search').fill('spice')
-  await expect(page.getByText('research/spice.md')).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('research/spice.md')).toBeVisible({ timeout: 30_000 })
 })

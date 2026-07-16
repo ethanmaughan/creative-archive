@@ -7,7 +7,13 @@ import {
 } from '@tanstack/react-query'
 import { useSession } from '@/app/store/session'
 import { getDataClient } from './data-client'
-import type { CreateDocumentInput, DocumentContent, DocumentDTO } from './types'
+import type {
+  CreateDocumentInput,
+  CreateLibraryItemInput,
+  DocumentContent,
+  DocumentDTO,
+  LibraryItemDTO,
+} from './types'
 
 export function useDocuments(): UseQueryResult<DocumentDTO[]> {
   const ready = useSession((s) => s.status === 'ready')
@@ -63,6 +69,30 @@ export function useCreateDocument(): UseMutationResult<
   return useMutation({
     mutationFn: (input: CreateDocumentInput) => getDataClient().createDocument(input),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
+}
+
+export function useLibraryItems(): UseQueryResult<LibraryItemDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['library'],
+    queryFn: () => getDataClient().listLibraryItems(),
+    enabled: ready,
+  })
+}
+
+export function useCreateLibraryItem(): UseMutationResult<
+  DocumentContent,
+  Error,
+  CreateLibraryItemInput
+> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateLibraryItemInput) => getDataClient().createLibraryItem(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['library'] })
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
     },
   })

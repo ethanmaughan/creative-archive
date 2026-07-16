@@ -25,6 +25,7 @@ import {
   isIndexablePath,
   workspaceForPath,
 } from '@/domain/models/workspace'
+import { MEDIA_TYPES, type DocumentKind } from '@/domain/models/document'
 import { hashText } from './content-hash'
 import type { Sqlite } from './migrator'
 
@@ -137,6 +138,7 @@ async function indexOneFile(
       [id, kind, relPath, title, workspaceId, contentHash, frontmatterJson, ctx.now(), ctx.now()],
     )
     writeFts(db, rowidFor(db, id), title, parsed.body, tags)
+    syncLibraryProjection(db, kind, id, ensured.data)
     return { id, outcome: 'inserted' }
   }
   if (existing.content_hash !== contentHash || existing.rel_path !== relPath) {
@@ -149,6 +151,7 @@ async function indexOneFile(
     )
     db.run('DELETE FROM documents_fts WHERE rowid = ?;', [existing.rowid])
     writeFts(db, existing.rowid, title, parsed.body, tags)
+    syncLibraryProjection(db, kind, id, ensured.data)
     return { id, outcome: 'updated' }
   }
   return { id, outcome: 'unchanged' }
@@ -158,6 +161,40 @@ function removeDocument(db: Sqlite, id: string, rowid: number): void {
   db.run('DELETE FROM documents_fts WHERE rowid = ?;', [rowid])
   db.run('DELETE FROM documents WHERE id = ?;', [id])
   pruneReferences(db, id)
+}
+
+/** Keep the typed `library_items` projection in sync with a document's frontmatter.
+ *  Non-library docs (or ones missing a valid mediaType) get no projection row. */
+function syncLibraryProjection(
+  db: Sqlite,
+  kind: DocumentKind,
+  documentId: string,
+  data: Frontmatter,
+): void {
+  const mediaType = data['mediaType']
+  const validMedia =
+    kind === 'library-item' &&
+    typeof mediaType === 'string' &&
+    (MEDIA_TYPES as readonly string[]).includes(mediaType)
+
+  if (!validMedia) {
+    db.run('DELETE FROM library_items WHERE document_id = ?;', [documentId])
+    return
+  }
+
+  const creator = typeof data['creator'] === 'string' ? data['creator'] : null
+  const year = typeof data['year'] === 'number' ? data['year'] : null
+  const consumedOn = typeof data['consumedOn'] === 'string' ? data['consumedOn'] : null
+  const rating = typeof data['rating'] === 'number' ? data['rating'] : null
+
+  db.run(
+    `INSERT INTO library_items (document_id, media_type, creator, year, consumed_on, rating)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(document_id) DO UPDATE SET
+       media_type = excluded.media_type, creator = excluded.creator, year = excluded.year,
+       consumed_on = excluded.consumed_on, rating = excluded.rating;`,
+    [documentId, mediaType as string, creator, year, consumedOn, rating],
+  )
 }
 
 export async function reconcile(
