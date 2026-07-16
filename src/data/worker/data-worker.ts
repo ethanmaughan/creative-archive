@@ -18,13 +18,16 @@ import { reconcile, reindexOne } from '@/data/storage/sqlite-index/reconciler'
 import { DocumentRepository, type DocumentRecord } from '@/data/repositories/document-repository'
 import { LibraryRepository } from '@/data/repositories/library-repository'
 import { ExtractionRepository } from '@/data/repositories/extraction-repository'
+import { ConnectionRepository } from '@/data/repositories/connection-repository'
 import { classifyKind } from '@/domain/models/workspace'
+import { validateConnection } from '@/domain/services/connection-rules'
 import { slugify } from '@/shared/slug'
 import { toFtsQuery } from './fts-query'
 import type {
   CreatableKind,
   CreateDocumentInput,
   CreateLibraryItemInput,
+  CreateConnectionInput,
   DataApi,
   DocumentContent,
   DocumentDTO,
@@ -37,6 +40,7 @@ let store: FsaFileStore | null = null
 let documents: DocumentRepository | null = null
 let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
+let connections: ConnectionRepository | null = null
 
 /** Target folder for each creatable, project-independent document kind. */
 const CREATE_FOLDER: Record<CreatableKind, string> = {
@@ -82,6 +86,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     documents = new DocumentRepository(db)
     library = new LibraryRepository(db)
     extraction = new ExtractionRepository(db)
+    connections = new ConnectionRepository(db)
   }
   return { db, documents: documents! }
 }
@@ -180,6 +185,37 @@ const api: DataApi = {
 
   async listFacets(facet?: string) {
     return extraction ? extraction.all(facet) : []
+  },
+
+  async listConnections() {
+    return connections ? connections.all() : []
+  },
+
+  async listDocumentConnections(documentId: string) {
+    return connections ? connections.forDocument(documentId) : []
+  },
+
+  async createConnection(input: CreateConnectionInput) {
+    if (!connections) throw new Error('No archive is open')
+    const validation = validateConnection({
+      source: { type: 'document', id: input.sourceId },
+      target: { type: 'document', id: input.targetId },
+      ...(input.relationship !== undefined ? { relationship: input.relationship } : {}),
+    })
+    if (!validation.valid) {
+      throw new Error(validation.issues.map((issue) => issue.message).join('; '))
+    }
+    connections.insert({
+      id: crypto.randomUUID(),
+      sourceId: input.sourceId,
+      targetId: input.targetId,
+      relationship: input.relationship ?? null,
+      createdAt: new Date().toISOString(),
+    })
+  },
+
+  async deleteConnection(id: string) {
+    connections?.remove(id)
   },
 
   async isOpen() {
