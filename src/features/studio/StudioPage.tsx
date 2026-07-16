@@ -1,5 +1,6 @@
 import type { JSX } from 'react'
 import { useDocuments } from '@/data/worker/hooks'
+import { ConsistencyButton } from '@/features/ai/ConsistencyButton'
 import { DocumentList } from '@/shared/ui/DocumentList'
 import { Spinner } from '@/shared/ui/Spinner'
 import { NewDocumentButton } from './NewDocumentButton'
@@ -18,6 +19,8 @@ export function StudioPage(): JSX.Element {
         </div>
         <NewDocumentButton />
       </div>
+
+      <ConsistencyButton />
 
       {isLoading ? (
         <div className="row">
