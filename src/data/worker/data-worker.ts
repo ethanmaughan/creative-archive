@@ -16,12 +16,14 @@ import { applyMigrations, type Sqlite } from '@/data/storage/sqlite-index/migrat
 import { MIGRATIONS } from '@/data/storage/sqlite-index/migrations'
 import { reconcile, reindexOne } from '@/data/storage/sqlite-index/reconciler'
 import { DocumentRepository, type DocumentRecord } from '@/data/repositories/document-repository'
+import { LibraryRepository } from '@/data/repositories/library-repository'
 import { classifyKind } from '@/domain/models/workspace'
 import { slugify } from '@/shared/slug'
 import { toFtsQuery } from './fts-query'
 import type {
   CreatableKind,
   CreateDocumentInput,
+  CreateLibraryItemInput,
   DataApi,
   DocumentContent,
   DocumentDTO,
@@ -32,6 +34,7 @@ import type {
 let db: Sqlite | null = null
 let store: FsaFileStore | null = null
 let documents: DocumentRepository | null = null
+let library: LibraryRepository | null = null
 
 /** Target folder for each creatable, project-independent document kind. */
 const CREATE_FOLDER: Record<CreatableKind, string> = {
@@ -75,6 +78,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     db = await openOpfs()
     applyMigrations(db, MIGRATIONS)
     documents = new DocumentRepository(db)
+    library = new LibraryRepository(db)
   }
   return { db, documents: documents! }
 }
@@ -138,6 +142,33 @@ const api: DataApi = {
       relPath = `${folder}/${slug}-${id.slice(0, 8)}.md`
     }
     const data: Record<string, unknown> = ensureId({ title: input.title }, () => id).data
+    const content = serializeFrontmatter(data, '')
+    await open.store.writeTextFile(relPath, content)
+    await reindexOne(open.store, open.db, relPath)
+    return toContent(relPath, data, '')
+  },
+
+  async listLibraryItems() {
+    return library ? library.all() : []
+  },
+
+  async createLibraryItem(input: CreateLibraryItemInput) {
+    const open = requireOpen()
+    const id = crypto.randomUUID()
+    const slug = slugify(input.title)
+    const folder = `library/${input.mediaType}`
+    let relPath = `${folder}/${slug}.md`
+    if (await open.store.stat(relPath)) {
+      relPath = `${folder}/${slug}-${id.slice(0, 8)}.md`
+    }
+    const data: Record<string, unknown> = {
+      id,
+      title: input.title,
+      mediaType: input.mediaType,
+    }
+    if (input.creator !== undefined) data['creator'] = input.creator
+    if (input.year !== undefined) data['year'] = input.year
+    if (input.rating !== undefined) data['rating'] = input.rating
     const content = serializeFrontmatter(data, '')
     await open.store.writeTextFile(relPath, content)
     await reindexOne(open.store, open.db, relPath)

@@ -6,7 +6,10 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 2 : 1,
+  // Each spec spins up a data worker + WASM SQLite + OPFS; cap concurrency so cold-start
+  // compilation doesn't overload the shared dev server.
+  workers: 2,
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:5173',
