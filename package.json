@@ -23,11 +23,15 @@
   },
   "dependencies": {
     "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "@tanstack/react-query": "^5.101.2",
+    "comlink": "^4.4.2",
     "drizzle-orm": "^0.45.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.1",
     "yaml": "^2.9.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

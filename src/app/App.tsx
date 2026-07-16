@@ -1,16 +1,13 @@
 import type { JSX } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from 'react-router-dom'
+import { queryClient } from './query'
+import { router } from './router'
 
-/**
- * Phase 1 app shell. Intentionally minimal — routing (React Router), state
- * (Zustand), and server-state (TanStack Query) are introduced in Phase 5
- * (UI framework), once the storage and domain layers exist beneath them.
- */
 export function App(): JSX.Element {
   return (
-    <main>
-      <h1>Creative Archive</h1>
-      <p>A local-first workspace for writers. AI retrieves; it never authors.</p>
-      <p className="phase">Phase 1 — project initialization.</p>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   )
 }
