@@ -492,3 +492,71 @@
   color: var(--counter);
   letter-spacing: 0.05em;
 }
+
+/* ---------- tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 0.3rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.3rem;
+}
+.tab {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.9rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tab.is-active {
+  color: var(--accent-ink);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---------- extraction facets ---------- */
+.facet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.facet {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.95rem;
+}
+.facet:hover {
+  border-color: var(--line-strong);
+}
+.facet .chip {
+  margin-top: 0.15rem;
+}
+.facet__body {
+  min-width: 0;
+  flex: 1;
+}
+.facet__doc {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+  margin-bottom: 0.25rem;
+}
+.facet__content {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

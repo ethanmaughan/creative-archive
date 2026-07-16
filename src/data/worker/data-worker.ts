@@ -17,6 +17,7 @@ import { MIGRATIONS } from '@/data/storage/sqlite-index/migrations'
 import { reconcile, reindexOne } from '@/data/storage/sqlite-index/reconciler'
 import { DocumentRepository, type DocumentRecord } from '@/data/repositories/document-repository'
 import { LibraryRepository } from '@/data/repositories/library-repository'
+import { ExtractionRepository } from '@/data/repositories/extraction-repository'
 import { classifyKind } from '@/domain/models/workspace'
 import { slugify } from '@/shared/slug'
 import { toFtsQuery } from './fts-query'
@@ -35,6 +36,7 @@ let db: Sqlite | null = null
 let store: FsaFileStore | null = null
 let documents: DocumentRepository | null = null
 let library: LibraryRepository | null = null
+let extraction: ExtractionRepository | null = null
 
 /** Target folder for each creatable, project-independent document kind. */
 const CREATE_FOLDER: Record<CreatableKind, string> = {
@@ -79,6 +81,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     applyMigrations(db, MIGRATIONS)
     documents = new DocumentRepository(db)
     library = new LibraryRepository(db)
+    extraction = new ExtractionRepository(db)
   }
   return { db, documents: documents! }
 }
@@ -173,6 +176,10 @@ const api: DataApi = {
     await open.store.writeTextFile(relPath, content)
     await reindexOne(open.store, open.db, relPath)
     return toContent(relPath, data, '')
+  },
+
+  async listFacets(facet?: string) {
+    return extraction ? extraction.all(facet) : []
   },
 
   async isOpen() {

@@ -57,6 +57,15 @@ export interface CreateLibraryItemInput {
   readonly rating?: number
 }
 
+/** A single creative-extraction facet entry, joined to its source document. */
+export interface FacetDTO {
+  readonly id: string
+  readonly relPath: string
+  readonly docTitle: string | null
+  readonly facet: string
+  readonly content: string
+}
+
 export interface DataApi {
   /** Open an archive folder: opens/creates the OPFS index, runs migrations, reconciles. */
   openArchive(handle: FileSystemDirectoryHandle): Promise<OpenResult>
@@ -74,5 +83,7 @@ export interface DataApi {
   listLibraryItems(): Promise<LibraryItemDTO[]>
   /** Create a new library item file with media metadata in its frontmatter. */
   createLibraryItem(input: CreateLibraryItemInput): Promise<DocumentContent>
+  /** List creative-extraction facets, optionally filtered to one facet kind. */
+  listFacets(facet?: string): Promise<FacetDTO[]>
   isOpen(): Promise<boolean>
 }
