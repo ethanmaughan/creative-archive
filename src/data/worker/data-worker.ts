@@ -5,17 +5,41 @@
  */
 import * as Comlink from 'comlink'
 import { FsaFileStore } from '@/data/storage/file-store/fsa-adapter/fsa-file-store'
+import { normalizeRelPath } from '@/data/storage/file-store/file-store'
+import {
+  ensureId,
+  parseFrontmatter,
+  serializeFrontmatter,
+} from '@/data/storage/file-store/frontmatter'
 import { openOpfs } from '@/data/storage/sqlite-index/client'
 import { applyMigrations, type Sqlite } from '@/data/storage/sqlite-index/migrator'
 import { MIGRATIONS } from '@/data/storage/sqlite-index/migrations'
-import { reconcile } from '@/data/storage/sqlite-index/reconciler'
+import { reconcile, reindexOne } from '@/data/storage/sqlite-index/reconciler'
 import { DocumentRepository, type DocumentRecord } from '@/data/repositories/document-repository'
+import { classifyKind } from '@/domain/models/workspace'
+import { slugify } from '@/shared/slug'
 import { toFtsQuery } from './fts-query'
-import type { DataApi, DocumentDTO, OpenResult } from './types'
+import type {
+  CreatableKind,
+  CreateDocumentInput,
+  DataApi,
+  DocumentContent,
+  DocumentDTO,
+  OpenResult,
+  SaveDocumentPatch,
+} from './types'
 
 let db: Sqlite | null = null
 let store: FsaFileStore | null = null
 let documents: DocumentRepository | null = null
+
+/** Target folder for each creatable, project-independent document kind. */
+const CREATE_FOLDER: Record<CreatableKind, string> = {
+  character: 'story-bible/characters',
+  location: 'story-bible/locations',
+  note: 'notebook',
+  research: 'research',
+}
 
 function toDto(record: DocumentRecord): DocumentDTO {
   return {
@@ -25,6 +49,25 @@ function toDto(record: DocumentRecord): DocumentDTO {
     title: record.title,
     workspaceId: record.workspaceId,
   }
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null
+}
+
+function toContent(relPath: string, data: Record<string, unknown>, body: string): DocumentContent {
+  return {
+    relPath,
+    id: asString(data['id']) ?? '',
+    kind: classifyKind(normalizeRelPath(relPath)),
+    title: asString(data['title']),
+    body,
+  }
+}
+
+function requireOpen(): { db: Sqlite; store: FsaFileStore } {
+  if (!db || !store) throw new Error('No archive is open')
+  return { db, store }
 }
 
 async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }> {
@@ -45,9 +88,9 @@ const api: DataApi = {
   },
 
   async reconcile() {
-    if (!db || !store || !documents) throw new Error('No archive is open')
-    const result = await reconcile(store, db)
-    return { docCount: documents.all().length, ...result } satisfies OpenResult
+    const open = requireOpen()
+    const result = await reconcile(open.store, open.db)
+    return { docCount: documents?.all().length ?? 0, ...result } satisfies OpenResult
   },
 
   async listDocuments() {
@@ -59,6 +102,46 @@ const api: DataApi = {
     const fts = toFtsQuery(query)
     if (fts === '') return []
     return documents.search(fts).map(toDto)
+  },
+
+  async readDocument(relPath) {
+    if (!store) return null
+    let raw: string
+    try {
+      raw = await store.readTextFile(relPath)
+    } catch {
+      return null
+    }
+    const parsed = parseFrontmatter(raw)
+    return toContent(relPath, parsed.data, parsed.body)
+  },
+
+  async saveDocument(relPath, patch: SaveDocumentPatch) {
+    const open = requireOpen()
+    const raw = await open.store.readTextFile(relPath)
+    const parsed = parseFrontmatter(raw)
+    const data: Record<string, unknown> = { ...parsed.data }
+    if (patch.title !== undefined) data['title'] = patch.title
+    const content = serializeFrontmatter(data, patch.body)
+    await open.store.writeTextFile(relPath, content)
+    await reindexOne(open.store, open.db, relPath)
+    return toContent(relPath, data, patch.body)
+  },
+
+  async createDocument(input: CreateDocumentInput) {
+    const open = requireOpen()
+    const id = crypto.randomUUID()
+    const slug = slugify(input.title)
+    const folder = CREATE_FOLDER[input.kind]
+    let relPath = `${folder}/${slug}.md`
+    if (await open.store.stat(relPath)) {
+      relPath = `${folder}/${slug}-${id.slice(0, 8)}.md`
+    }
+    const data: Record<string, unknown> = ensureId({ title: input.title }, () => id).data
+    const content = serializeFrontmatter(data, '')
+    await open.store.writeTextFile(relPath, content)
+    await reindexOne(open.store, open.db, relPath)
+    return toContent(relPath, data, '')
   },
 
   async isOpen() {

@@ -18,6 +18,7 @@ export const WORKSPACE_DEFS: readonly WorkspaceDef[] = [
   { id: 'ws-story-bible', name: 'Story Bible', relPath: 'story-bible', protection: 'canonical' },
   { id: 'ws-library', name: 'Library', relPath: 'library', protection: 'canonical' },
   { id: 'ws-research', name: 'Research', relPath: 'research', protection: 'canonical' },
+  { id: 'ws-notebook', name: 'Notebook', relPath: 'notebook', protection: 'canonical' },
   { id: 'ws-workspaces', name: 'AI Workspaces', relPath: 'workspaces', protection: 'writable' },
 ]
 
@@ -43,6 +44,7 @@ export function classifyKind(relPath: string): DocumentKind {
   if (relPath.startsWith('story-bible/characters/')) return 'character'
   if (relPath.startsWith('story-bible/locations/')) return 'location'
   if (relPath.startsWith('research/')) return 'research'
+  if (relPath.startsWith('notebook/')) return 'note'
   const inProject = /^projects\/[^/]+\/([^/]+)\//.exec(relPath)
   if (inProject) {
     switch (inProject[1]) {
