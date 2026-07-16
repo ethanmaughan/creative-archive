@@ -28,6 +28,7 @@ test('opening an archive indexes documents and search finds them', async ({ page
     )
   })
 
+  await expect(page.getByRole('heading', { name: 'Open your archive' })).toBeVisible()
   await page.getByRole('button', { name: /open archive folder/i }).click()
 
   // Wait for the worker to open the index + reconcile (cold-start compiles the worker chunk).
@@ -37,7 +38,7 @@ test('opening an archive indexes documents and search finds them', async ({ page
   await expect(page.getByText('Mara Vell')).toBeVisible({ timeout: 15_000 })
 
   // Full-text search finds the research note by a word in its body.
-  await page.getByRole('link', { name: 'Search' }).click()
+  await page.getByRole('link', { name: 'Search', exact: true }).click()
   await page.getByLabel('Search').fill('spice')
   await expect(page.getByText('research/spice.md')).toBeVisible({ timeout: 15_000 })
 })

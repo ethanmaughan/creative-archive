@@ -347,3 +347,108 @@
   color: var(--muted);
   font-size: 0.9rem;
 }
+
+/* ---------- studio header + new-doc ---------- */
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+.newdoc {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.newdoc__select,
+.newdoc__input {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+}
+.newdoc__input {
+  min-width: 12rem;
+}
+
+/* ---------- document view + editor ---------- */
+.doc-head {
+  margin-bottom: 1.2rem;
+}
+.doc-head .chip {
+  margin-bottom: 0.5rem;
+}
+.doc-head .page-title {
+  margin-bottom: 0.15rem;
+}
+.doc-head__path {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.prose-editor .ProseMirror {
+  min-height: 340px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.3rem;
+  outline: none;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.prose-editor .ProseMirror:focus-within {
+  border-color: var(--line-strong);
+}
+.prose-editor .ProseMirror > * + * {
+  margin-top: 0.8rem;
+}
+.prose-editor .ProseMirror h1,
+.prose-editor .ProseMirror h2,
+.prose-editor .ProseMirror h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.prose-editor .ProseMirror h1 {
+  font-size: 1.6rem;
+}
+.prose-editor .ProseMirror h2 {
+  font-size: 1.3rem;
+}
+.prose-editor .ProseMirror blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 0.9rem;
+  color: var(--muted);
+  font-style: italic;
+}
+.prose-editor .ProseMirror code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--bg);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.prose-editor .ProseMirror pre {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0.8rem 1rem;
+  overflow-x: auto;
+}
+.prose-editor .ProseMirror ul,
+.prose-editor .ProseMirror ol {
+  padding-left: 1.4rem;
+}
+.editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}

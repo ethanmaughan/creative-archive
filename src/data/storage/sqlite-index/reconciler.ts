@@ -94,6 +94,72 @@ function pruneReferences(db: Sqlite, documentId: string): void {
   db.run(`DELETE FROM taggings WHERE entity_type = 'document' AND entity_id = ?;`, [documentId])
 }
 
+interface IndexContext {
+  now: () => string
+  generateId: () => string
+}
+
+/** Read one file, ensure its UUID, and upsert its index row + FTS entry. Matches by id. */
+async function indexOneFile(
+  fileStore: FileStore,
+  db: Sqlite,
+  relPath: string,
+  ctx: IndexContext,
+): Promise<{ id: string; outcome: 'inserted' | 'updated' | 'unchanged' }> {
+  const raw = await fileStore.readTextFile(relPath)
+  const parsed = parseFrontmatter(raw)
+  const ensured = ensureId(parsed.data, ctx.generateId)
+
+  let effectiveRaw = raw
+  if (ensured.added) {
+    effectiveRaw = serializeFrontmatter(ensured.data, parsed.body)
+    await fileStore.writeTextFile(relPath, effectiveRaw)
+  }
+
+  const id = ensured.id
+  const contentHash = await hashText(effectiveRaw)
+  const kind = classifyKind(relPath)
+  const workspaceId = workspaceForPath(relPath)?.id ?? null
+  const title = titleFor(ensured.data, relPath)
+  const tags = extractTags(ensured.data)
+  const frontmatterJson = JSON.stringify(ensured.data)
+
+  const existing = db.selectRows<{ rowid: number; rel_path: string; content_hash: string }>(
+    'SELECT rowid, rel_path, content_hash FROM documents WHERE id = ?;',
+    [id],
+  )[0]
+
+  if (!existing) {
+    db.run(
+      `INSERT INTO documents
+         (id, kind, rel_path, title, workspace_id, content_hash, frontmatter, file_mtime, indexed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+      [id, kind, relPath, title, workspaceId, contentHash, frontmatterJson, ctx.now(), ctx.now()],
+    )
+    writeFts(db, rowidFor(db, id), title, parsed.body, tags)
+    return { id, outcome: 'inserted' }
+  }
+  if (existing.content_hash !== contentHash || existing.rel_path !== relPath) {
+    db.run(
+      `UPDATE documents
+         SET kind = ?, rel_path = ?, title = ?, workspace_id = ?, content_hash = ?,
+             frontmatter = ?, indexed_at = ?
+       WHERE id = ?;`,
+      [kind, relPath, title, workspaceId, contentHash, frontmatterJson, ctx.now(), id],
+    )
+    db.run('DELETE FROM documents_fts WHERE rowid = ?;', [existing.rowid])
+    writeFts(db, existing.rowid, title, parsed.body, tags)
+    return { id, outcome: 'updated' }
+  }
+  return { id, outcome: 'unchanged' }
+}
+
+function removeDocument(db: Sqlite, id: string, rowid: number): void {
+  db.run('DELETE FROM documents_fts WHERE rowid = ?;', [rowid])
+  db.run('DELETE FROM documents WHERE id = ?;', [id])
+  pruneReferences(db, id)
+}
+
 export async function reconcile(
   fileStore: FileStore,
   db: Sqlite,
@@ -115,58 +181,16 @@ export async function reconcile(
   let unchanged = 0
   const seen = new Set<string>()
 
+  const ctx: IndexContext = { now, generateId }
   for await (const entry of fileStore.list()) {
     if (entry.kind !== 'file') continue
     const relPath = normalizeRelPath(entry.relPath)
     if (!isIndexablePath(relPath)) continue
-
-    const raw = await fileStore.readTextFile(relPath)
-    const parsed = parseFrontmatter(raw)
-    const ensured = ensureId(parsed.data, generateId)
-
-    let effectiveRaw = raw
-    if (ensured.added) {
-      effectiveRaw = serializeFrontmatter(ensured.data, parsed.body)
-      await fileStore.writeTextFile(relPath, effectiveRaw)
-    }
-
-    const id = ensured.id
+    const { id, outcome } = await indexOneFile(fileStore, db, relPath, ctx)
     seen.add(id)
-    const contentHash = await hashText(effectiveRaw)
-    const kind = classifyKind(relPath)
-    const workspaceId = workspaceForPath(relPath)?.id ?? null
-    const title = titleFor(ensured.data, relPath)
-    const tags = extractTags(ensured.data)
-    const frontmatterJson = JSON.stringify(ensured.data)
-
-    const existing = db.selectRows<{ rowid: number; rel_path: string; content_hash: string }>(
-      'SELECT rowid, rel_path, content_hash FROM documents WHERE id = ?;',
-      [id],
-    )[0]
-
-    if (!existing) {
-      db.run(
-        `INSERT INTO documents
-           (id, kind, rel_path, title, workspace_id, content_hash, frontmatter, file_mtime, indexed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-        [id, kind, relPath, title, workspaceId, contentHash, frontmatterJson, now(), now()],
-      )
-      writeFts(db, rowidFor(db, id), title, parsed.body, tags)
-      inserted++
-    } else if (existing.content_hash !== contentHash || existing.rel_path !== relPath) {
-      db.run(
-        `UPDATE documents
-           SET kind = ?, rel_path = ?, title = ?, workspace_id = ?, content_hash = ?,
-               frontmatter = ?, indexed_at = ?
-         WHERE id = ?;`,
-        [kind, relPath, title, workspaceId, contentHash, frontmatterJson, now(), id],
-      )
-      db.run('DELETE FROM documents_fts WHERE rowid = ?;', [existing.rowid])
-      writeFts(db, existing.rowid, title, parsed.body, tags)
-      updated++
-    } else {
-      unchanged++
-    }
+    if (outcome === 'inserted') inserted++
+    else if (outcome === 'updated') updated++
+    else unchanged++
   }
 
   // Prune documents whose files are gone (plus their polymorphic references).
@@ -182,12 +206,51 @@ export async function reconcile(
     const present = db.selectRows<{ id: string; rowid: number }>('SELECT id, rowid FROM documents;')
     for (const row of present) {
       if (seen.has(row.id)) continue
-      db.run('DELETE FROM documents_fts WHERE rowid = ?;', [row.rowid])
-      db.run('DELETE FROM documents WHERE id = ?;', [row.id])
-      pruneReferences(db, row.id)
+      removeDocument(db, row.id, row.rowid)
       deleted++
     }
   }
 
   return { inserted, updated, deleted, unchanged }
+}
+
+export type ReindexOutcome = 'inserted' | 'updated' | 'unchanged' | 'removed' | 'skipped'
+
+export interface ReindexOptions {
+  now?: () => string
+  generateId?: () => string
+}
+
+/** Reconcile a single document by path — used right after the app writes a file, so we
+ *  don't rescan the whole archive. Handles create/update and removal. */
+export async function reindexOne(
+  fileStore: FileStore,
+  db: Sqlite,
+  relPath: string,
+  options: ReindexOptions = {},
+): Promise<ReindexOutcome> {
+  const rel = normalizeRelPath(relPath)
+  if (!isIndexablePath(rel)) return 'skipped'
+
+  const ctx: IndexContext = {
+    now: options.now ?? (() => new Date().toISOString()),
+    generateId: options.generateId ?? (() => crypto.randomUUID()),
+  }
+  ensureWorkspaces(db, ctx.now)
+
+  const stat = await fileStore.stat(rel)
+  if (!stat) {
+    const existing = db.selectRows<{ id: string; rowid: number }>(
+      'SELECT id, rowid FROM documents WHERE rel_path = ?;',
+      [rel],
+    )[0]
+    if (existing) {
+      removeDocument(db, existing.id, existing.rowid)
+      return 'removed'
+    }
+    return 'skipped'
+  }
+
+  const { outcome } = await indexOneFile(fileStore, db, rel, ctx)
+  return outcome
 }
