@@ -5,6 +5,18 @@
 # Enable once per clone:  git config core.hooksPath .githooks
 set -e
 
+# git feeds "<local ref> <local sha> <remote ref> <remote sha>" per pushed ref on stdin.
+# A deletion has an all-zero local sha; skip verify when the push only deletes refs (there
+# is nothing to check, and such pushes often run from the bare main checkout with no deps).
+has_commits=0
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  case "$local_sha" in
+    '') ;;
+    *[!0]*) has_commits=1 ;;
+  esac
+done
+[ "$has_commits" -eq 0 ] && exit 0
+
 echo "pre-push → pnpm verify (typecheck · lint · unit)…"
 
 if command -v mise >/dev/null 2>&1; then
