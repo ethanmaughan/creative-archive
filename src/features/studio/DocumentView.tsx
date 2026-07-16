@@ -4,6 +4,7 @@ import { useDocument, useSaveDocument } from '@/data/worker/hooks'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { kindLabel } from '@/shared/ui/kind-label'
+import { ConnectionsPanel } from '@/features/connections/ConnectionsPanel'
 import { DocumentEditor } from './DocumentEditor'
 
 export function DocumentView(): JSX.Element {
@@ -63,6 +64,8 @@ export function DocumentView(): JSX.Element {
           {saveLabel}
         </Button>
       </div>
+
+      {doc.id !== '' ? <ConnectionsPanel documentId={doc.id} /> : null}
     </div>
   )
 }

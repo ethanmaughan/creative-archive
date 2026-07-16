@@ -8,6 +8,8 @@ import {
 import { useSession } from '@/app/store/session'
 import { getDataClient } from './data-client'
 import type {
+  ConnectionEdgeDTO,
+  CreateConnectionInput,
   CreateDocumentInput,
   CreateLibraryItemInput,
   DocumentContent,
@@ -105,5 +107,45 @@ export function useFacets(facet: string | null): UseQueryResult<FacetDTO[]> {
     queryKey: ['facets', facet],
     queryFn: () => getDataClient().listFacets(facet ?? undefined),
     enabled: ready,
+  })
+}
+
+export function useAllConnections(): UseQueryResult<ConnectionEdgeDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['connections'],
+    queryFn: () => getDataClient().listConnections(),
+    enabled: ready,
+  })
+}
+
+export function useDocumentConnections(
+  documentId: string | null,
+): UseQueryResult<ConnectionEdgeDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['connections', 'doc', documentId],
+    queryFn: () => getDataClient().listDocumentConnections(documentId as string),
+    enabled: ready && documentId !== null && documentId.length > 0,
+  })
+}
+
+export function useCreateConnection(): UseMutationResult<void, Error, CreateConnectionInput> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateConnectionInput) => getDataClient().createConnection(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['connections'] })
+    },
+  })
+}
+
+export function useDeleteConnection(): UseMutationResult<void, Error, string> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => getDataClient().deleteConnection(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['connections'] })
+    },
   })
 }
