@@ -93,6 +93,16 @@ export interface CreateConnectionInput {
   readonly relationship?: string
 }
 
+export interface AiStatus {
+  readonly available: boolean
+}
+
+/** Result of an AI run: the workspace file it wrote plus the generated text. */
+export interface AiRunResultDTO {
+  readonly workspacePath: string
+  readonly content: string
+}
+
 export interface DataApi {
   /** Open an archive folder: opens/creates the OPFS index, runs migrations, reconciles. */
   openArchive(handle: FileSystemDirectoryHandle): Promise<OpenResult>
@@ -120,5 +130,11 @@ export interface DataApi {
   /** Create a document↔document connection (rejects self-references). */
   createConnection(input: CreateConnectionInput): Promise<void>
   deleteConnection(id: string): Promise<void>
+  /** Whether local AI (Ollama) is reachable. */
+  aiStatus(): Promise<AiStatus>
+  /** Summarize a document; writes the summary into a writable workspace. */
+  summarizeDocument(relPath: string, model: string): Promise<AiRunResultDTO>
+  /** Check the story bible for inconsistencies; writes findings into a writable workspace. */
+  checkConsistency(model: string): Promise<AiRunResultDTO>
   isOpen(): Promise<boolean>
 }

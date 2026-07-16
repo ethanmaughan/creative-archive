@@ -21,6 +21,9 @@ import { ExtractionRepository } from '@/data/repositories/extraction-repository'
 import { ConnectionRepository } from '@/data/repositories/connection-repository'
 import { classifyKind } from '@/domain/models/workspace'
 import { validateConnection } from '@/domain/services/connection-rules'
+import { OllamaClient } from '@/data/ai/ollama-client'
+import { checkConsistency, summarizeDocument } from '@/data/ai/ai-service'
+import type { AiClient } from '@/data/ai/ai-client'
 import { slugify } from '@/shared/slug'
 import { buildSnippet, queryTerms, toFtsQuery } from './fts-query'
 import type {
@@ -42,6 +45,7 @@ let documents: DocumentRepository | null = null
 let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
 let connections: ConnectionRepository | null = null
+const aiClient: AiClient = new OllamaClient()
 
 /** Target folder for each creatable, project-independent document kind. */
 const CREATE_FOLDER: Record<CreatableKind, string> = {
@@ -236,6 +240,20 @@ const api: DataApi = {
 
   async deleteConnection(id: string) {
     connections?.remove(id)
+  },
+
+  async aiStatus() {
+    return { available: await aiClient.isAvailable() }
+  },
+
+  async summarizeDocument(relPath: string, model: string) {
+    const open = requireOpen()
+    return summarizeDocument({ store: open.store, db: open.db, ai: aiClient }, relPath, model)
+  },
+
+  async checkConsistency(model: string) {
+    const open = requireOpen()
+    return checkConsistency({ store: open.store, db: open.db, ai: aiClient }, model)
   },
 
   async isOpen() {

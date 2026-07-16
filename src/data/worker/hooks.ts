@@ -8,6 +8,8 @@ import {
 import { useSession } from '@/app/store/session'
 import { getDataClient } from './data-client'
 import type {
+  AiRunResultDTO,
+  AiStatus,
   ConnectionEdgeDTO,
   CreateConnectionInput,
   CreateDocumentInput,
@@ -147,6 +149,42 @@ export function useDeleteConnection(): UseMutationResult<void, Error, string> {
     mutationFn: (id: string) => getDataClient().deleteConnection(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['connections'] })
+    },
+  })
+}
+
+export function useAiStatus(): UseQueryResult<AiStatus> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['ai-status'],
+    queryFn: () => getDataClient().aiStatus(),
+    enabled: ready,
+    staleTime: 60_000,
+  })
+}
+
+interface SummarizeVars {
+  relPath: string
+  model: string
+}
+
+export function useSummarize(): UseMutationResult<AiRunResultDTO, Error, SummarizeVars> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ relPath, model }: SummarizeVars) =>
+      getDataClient().summarizeDocument(relPath, model),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
+}
+
+export function useCheckConsistency(): UseMutationResult<AiRunResultDTO, Error, string> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (model: string) => getDataClient().checkConsistency(model),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['documents'] })
     },
   })
 }

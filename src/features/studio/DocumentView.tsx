@@ -5,6 +5,7 @@ import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { kindLabel } from '@/shared/ui/kind-label'
 import { ConnectionsPanel } from '@/features/connections/ConnectionsPanel'
+import { SummarizePanel } from '@/features/ai/SummarizePanel'
 import { DocumentEditor } from './DocumentEditor'
 
 export function DocumentView(): JSX.Element {
@@ -66,6 +67,7 @@ export function DocumentView(): JSX.Element {
       </div>
 
       {doc.id !== '' ? <ConnectionsPanel documentId={doc.id} /> : null}
+      <SummarizePanel relPath={relPath} />
     </div>
   )
 }
