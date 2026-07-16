@@ -1,0 +1,16 @@
+#!/bin/sh
+# Pre-push gate: run the fast checks (typecheck · lint · unit) before code leaves the
+# machine. The full Playwright e2e runs in CI. Bypass in a pinch with `git push --no-verify`.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+set -e
+
+echo "pre-push → pnpm verify (typecheck · lint · unit)…"
+
+if command -v mise >/dev/null 2>&1; then
+  mise x -- corepack pnpm verify
+elif command -v corepack >/dev/null 2>&1; then
+  corepack pnpm verify
+else
+  pnpm verify
+fi

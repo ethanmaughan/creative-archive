@@ -38,3 +38,15 @@ mise x -- corepack pnpm test:e2e   # Playwright (Chromium)
 
 Optional local AI: run Ollama with `OLLAMA_ORIGINS='*' ollama serve` and pull a model
 (default `llama3.2`).
+
+### Pre-push checks
+
+CI runs the full gates on every push/PR. To also block a broken push locally, enable the
+committed pre-push hook (once per clone; it applies to all worktrees):
+
+```sh
+git config core.hooksPath .githooks
+```
+
+It runs `pnpm verify` (typecheck · lint · unit) before each push; e2e stays in CI. Bypass
+with `git push --no-verify`.
