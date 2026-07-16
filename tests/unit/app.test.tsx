@@ -5,13 +5,15 @@ import { App } from '@/app/App'
 afterEach(cleanup)
 
 describe('App shell', () => {
-  it('renders the archive heading', () => {
+  it('renders the brand and the open-archive gate', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'Creative Archive', level: 1 })).toBeInTheDocument()
+    expect(screen.getAllByText('Creative Archive').length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', { name: 'Open your archive' })).toBeInTheDocument()
   })
 
-  it('states the core principle: AI retrieves, never authors', () => {
+  it('shows the sidebar navigation', () => {
     render(<App />)
-    expect(screen.getByText(/AI retrieves; it never authors/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /studio/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /search/i })).toBeInTheDocument()
   })
 })
