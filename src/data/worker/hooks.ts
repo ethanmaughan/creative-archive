@@ -6,6 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { useSession } from '@/app/store/session'
+import type { SubmissionStatus } from '@/domain/models/submission'
 import { getDataClient } from './data-client'
 import type {
   AiRunResultDTO,
@@ -14,11 +15,15 @@ import type {
   CreateConnectionInput,
   CreateDocumentInput,
   CreateLibraryItemInput,
+  CreateMarketInput,
+  CreateSubmissionInput,
   DocumentContent,
   DocumentDTO,
   FacetDTO,
   LibraryItemDTO,
+  MarketDTO,
   SearchResultDTO,
+  SubmissionDTO,
 } from './types'
 
 export function useDocuments(): UseQueryResult<DocumentDTO[]> {
@@ -185,6 +190,59 @@ export function useCheckConsistency(): UseMutationResult<AiRunResultDTO, Error, 
     mutationFn: (model: string) => getDataClient().checkConsistency(model),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
+}
+
+export function useMarkets(): UseQueryResult<MarketDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['markets'],
+    queryFn: () => getDataClient().listMarkets(),
+    enabled: ready,
+  })
+}
+
+export function useCreateMarket(): UseMutationResult<void, Error, CreateMarketInput> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateMarketInput) => getDataClient().createMarket(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['markets'] })
+    },
+  })
+}
+
+export function useSubmissions(): UseQueryResult<SubmissionDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['submissions'],
+    queryFn: () => getDataClient().listSubmissions(),
+    enabled: ready,
+  })
+}
+
+export function useCreateSubmission(): UseMutationResult<void, Error, CreateSubmissionInput> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateSubmissionInput) => getDataClient().createSubmission(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['submissions'] })
+    },
+  })
+}
+
+interface TransitionVars {
+  id: string
+  to: SubmissionStatus
+}
+
+export function useTransitionSubmission(): UseMutationResult<void, Error, TransitionVars> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, to }: TransitionVars) => getDataClient().transitionSubmission(id, to),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['submissions'] })
     },
   })
 }

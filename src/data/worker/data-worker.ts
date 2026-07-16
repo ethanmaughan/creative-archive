@@ -24,6 +24,9 @@ import { validateConnection } from '@/domain/services/connection-rules'
 import { OllamaClient } from '@/data/ai/ollama-client'
 import { checkConsistency, summarizeDocument } from '@/data/ai/ai-service'
 import type { AiClient } from '@/data/ai/ai-client'
+import { QueryTrackerRepository } from '@/data/repositories/query-tracker-repository'
+import { canTransition } from '@/domain/services/submission-workflow'
+import type { SubmissionStatus } from '@/domain/models/submission'
 import { slugify } from '@/shared/slug'
 import { buildSnippet, queryTerms, toFtsQuery } from './fts-query'
 import type {
@@ -31,6 +34,8 @@ import type {
   CreateDocumentInput,
   CreateLibraryItemInput,
   CreateConnectionInput,
+  CreateMarketInput,
+  CreateSubmissionInput,
   DataApi,
   DocumentContent,
   DocumentDTO,
@@ -45,7 +50,12 @@ let documents: DocumentRepository | null = null
 let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
 let connections: ConnectionRepository | null = null
+let queryTracker: QueryTrackerRepository | null = null
 const aiClient: AiClient = new OllamaClient()
+
+function csvCell(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`
+}
 
 /** Target folder for each creatable, project-independent document kind. */
 const CREATE_FOLDER: Record<CreatableKind, string> = {
@@ -92,6 +102,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     library = new LibraryRepository(db)
     extraction = new ExtractionRepository(db)
     connections = new ConnectionRepository(db)
+    queryTracker = new QueryTrackerRepository(db)
   }
   return { db, documents: documents! }
 }
@@ -254,6 +265,87 @@ const api: DataApi = {
   async checkConsistency(model: string) {
     const open = requireOpen()
     return checkConsistency({ store: open.store, db: open.db, ai: aiClient }, model)
+  },
+
+  async listMarkets() {
+    return queryTracker ? queryTracker.markets() : []
+  },
+
+  async createMarket(input: CreateMarketInput) {
+    if (!queryTracker) throw new Error('No archive is open')
+    queryTracker.insertMarket({ id: crypto.randomUUID(), kind: input.kind, name: input.name })
+  },
+
+  async listSubmissions() {
+    return queryTracker ? queryTracker.submissions() : []
+  },
+
+  async createSubmission(input: CreateSubmissionInput) {
+    if (!queryTracker) throw new Error('No archive is open')
+    const now = new Date().toISOString()
+    queryTracker.insertSubmission({
+      id: crypto.randomUUID(),
+      title: input.title,
+      marketId: input.marketId,
+      documentId: input.documentId ?? null,
+      manuscriptRev: input.manuscriptRev ?? null,
+      status: 'draft',
+      createdAt: now,
+      updatedAt: now,
+    })
+  },
+
+  async transitionSubmission(id: string, to: SubmissionStatus) {
+    if (!queryTracker) throw new Error('No archive is open')
+    const current = queryTracker.statusOf(id)
+    if (current === null) throw new Error('Submission not found')
+    if (!canTransition(current as SubmissionStatus, to)) {
+      throw new Error(`Cannot move a submission from "${current}" to "${to}".`)
+    }
+    const now = new Date().toISOString()
+    queryTracker.updateStatus(id, to, now)
+    queryTracker.addEvent({
+      id: crypto.randomUUID(),
+      submissionId: id,
+      kind: 'status_change',
+      status: to,
+      body: null,
+      occurredOn: now,
+    })
+  },
+
+  async listSubmissionEvents(submissionId: string) {
+    return queryTracker ? queryTracker.eventsFor(submissionId) : []
+  },
+
+  async exportSubmissionsCsv() {
+    const rows = queryTracker?.submissions() ?? []
+    const header = [
+      'Title',
+      'Market',
+      'Kind',
+      'Status',
+      'Submitted',
+      'Deadline',
+      'Manuscript version',
+    ]
+    const lines = [
+      header,
+      ...rows.map((r) => [
+        r.title,
+        r.marketName ?? '',
+        r.marketKind ?? '',
+        r.status,
+        r.submittedOn ?? '',
+        r.deadlineOn ?? '',
+        r.manuscriptRev ?? '',
+      ]),
+    ]
+    return lines.map((cols) => cols.map(csvCell).join(',')).join('\n')
+  },
+
+  async exportSubmissionsJson() {
+    return JSON.stringify(queryTracker?.submissions() ?? [], null, 2)
   },
 
   async isOpen() {
