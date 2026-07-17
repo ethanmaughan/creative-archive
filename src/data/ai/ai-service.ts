@@ -10,7 +10,11 @@ import { type FileStore } from '../storage/file-store/file-store'
 import { parseFrontmatter, serializeFrontmatter } from '../storage/file-store/frontmatter'
 import { reindexOne } from '../storage/sqlite-index/reconciler'
 import type { Sqlite } from '../storage/sqlite-index/migrator'
-import { buildConsistencyPrompt, buildSummaryPrompt } from '@/domain/services/ai-prompts'
+import {
+  buildConsistencyPrompt,
+  buildSuggestionsPrompt,
+  buildSummaryPrompt,
+} from '@/domain/services/ai-prompts'
 import { slugify } from '@/shared/slug'
 import type { AiClient } from './ai-client'
 
@@ -65,6 +69,31 @@ export async function summarizeDocument(
   await writeToWorkspace(deps, workspacePath, `Summary — ${title}`, summary, now, generateId)
   logRun(deps.db, generateId(), 'summarize', now)
   return { workspacePath, content: summary }
+}
+
+export async function suggestEdits(
+  deps: AiDeps,
+  relPath: string,
+  model: string,
+): Promise<AiRunOutput> {
+  const now = deps.now ?? (() => new Date().toISOString())
+  const generateId = deps.generateId ?? (() => crypto.randomUUID())
+
+  const parsed = parseFrontmatter(await deps.store.readTextFile(relPath))
+  const title = typeof parsed.data['title'] === 'string' ? parsed.data['title'] : relPath
+  const suggestions = await deps.ai.generate(buildSuggestionsPrompt(title, parsed.body), model)
+
+  const workspacePath = `workspaces/ai/suggestions/${slugify(title)}.md`
+  await writeToWorkspace(
+    deps,
+    workspacePath,
+    `Suggestions — ${title}`,
+    suggestions,
+    now,
+    generateId,
+  )
+  logRun(deps.db, generateId(), 'suggest', now)
+  return { workspacePath, content: suggestions }
 }
 
 export async function checkConsistency(deps: AiDeps, model: string): Promise<AiRunOutput> {

@@ -184,6 +184,16 @@ export function useSummarize(): UseMutationResult<AiRunResultDTO, Error, Summari
   })
 }
 
+export function useSuggestEdits(): UseMutationResult<AiRunResultDTO, Error, SummarizeVars> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ relPath, model }: SummarizeVars) => getDataClient().suggestEdits(relPath, model),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
+}
+
 export function useCheckConsistency(): UseMutationResult<AiRunResultDTO, Error, string> {
   const queryClient = useQueryClient()
   return useMutation({
