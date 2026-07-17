@@ -179,6 +179,8 @@ export interface DataApi {
   aiStatus(): Promise<AiStatus>
   /** Summarize a document; writes the summary into a writable workspace. */
   summarizeDocument(relPath: string, model: string): Promise<AiRunResultDTO>
+  /** Advisory edit suggestions; writes them into a writable workspace (never the doc). */
+  suggestEdits(relPath: string, model: string): Promise<AiRunResultDTO>
   /** Check the story bible for inconsistencies; writes findings into a writable workspace. */
   checkConsistency(model: string): Promise<AiRunResultDTO>
   // Query Tracker

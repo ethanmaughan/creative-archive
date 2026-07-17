@@ -5,7 +5,12 @@ import { applyMigrations, type Sqlite } from '@/data/storage/sqlite-index/migrat
 import { MIGRATIONS } from '@/data/storage/sqlite-index/migrations'
 import { reconcile } from '@/data/storage/sqlite-index/reconciler'
 import { MemoryFileStore } from '@/data/storage/file-store/fake/memory-file-store'
-import { summarizeDocument, checkConsistency, type AiDeps } from '@/data/ai/ai-service'
+import {
+  summarizeDocument,
+  suggestEdits,
+  checkConsistency,
+  type AiDeps,
+} from '@/data/ai/ai-service'
 import type { AiClient } from '@/data/ai/ai-client'
 
 class FakeAi implements AiClient {
@@ -57,6 +62,28 @@ describe('AI service', () => {
     ).toBe(1)
     // prompt fed the real body (retrieval, not invention)
     expect(ai.lastPrompt).toContain('Mara arrives at the glass house.')
+  })
+
+  it('writes edit suggestions to a workspace without touching the document', async () => {
+    const store = new MemoryFileStore({
+      'projects/glass/manuscript/01.md':
+        '---\nid: ch1\ntitle: Chapter One\n---\nMara arrives at the glass house.\n',
+    })
+    await reconcile(store, db, { now, generateId })
+    const result = await suggestEdits(
+      { store, db, ai: new FakeAi('1. Tighten the opening line.'), now, generateId },
+      'projects/glass/manuscript/01.md',
+      'test-model',
+    )
+    expect(result.workspacePath).toBe('workspaces/ai/suggestions/chapter-one.md')
+    expect(store.peek(result.workspacePath)).toContain('Tighten the opening line.')
+    expect(store.peek('projects/glass/manuscript/01.md')).toContain(
+      'Mara arrives at the glass house.',
+    )
+    expect(
+      db.selectRows<{ n: number }>("SELECT count(*) AS n FROM ai_runs WHERE task = 'suggest';")[0]
+        ?.n,
+    ).toBe(1)
   })
 
   it('checks consistency over story-bible docs only', async () => {

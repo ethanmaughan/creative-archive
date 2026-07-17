@@ -839,3 +839,60 @@
 .pill--muted {
   color: var(--faint);
 }
+
+/* ---------- editor toolbar + save status ---------- */
+.tb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding: 0.4rem;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface);
+}
+.tb__btn {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  min-width: 2rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tb__btn:hover {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  color: var(--ink);
+}
+.tb__btn.is-active {
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+}
+.editor .prose-editor .ProseMirror {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.editor-actions {
+  align-items: center;
+  gap: 0.8rem;
+}
+.save-status {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--faint);
+  margin-right: auto;
+}
+.save-status.is-dirty {
+  color: var(--counter);
+}
+.ai-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 0.5rem 0 0;
+}
+.ai-hint code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}

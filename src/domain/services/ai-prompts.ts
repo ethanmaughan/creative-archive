@@ -20,6 +20,22 @@ export function buildSummaryPrompt(title: string, body: string): string {
   ].join('\n')
 }
 
+export function buildSuggestionsPrompt(title: string, body: string): string {
+  return [
+    'You are an editorial assistant for a writer. Read the document and offer concrete,',
+    'advisory suggestions to improve it — tightening, clarity, pacing, word choice, consistency.',
+    'Rules: SUGGEST, do not rewrite. Do NOT produce a revised version of the text. Give a short',
+    'numbered list of specific suggestions the writer can choose to apply by hand, each quoting or',
+    'pointing at the passage it refers to. Invent nothing that is not in the text.',
+    '',
+    `Title: ${title}`,
+    '---',
+    body.trim(),
+    '---',
+    'Suggestions:',
+  ].join('\n')
+}
+
 export function buildConsistencyPrompt(docs: readonly DocForPrompt[]): string {
   const sections = docs.map((d) => `## ${d.title}\n${d.body.trim()}`).join('\n\n')
   return [

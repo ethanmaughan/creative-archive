@@ -22,7 +22,7 @@ import { ConnectionRepository } from '@/data/repositories/connection-repository'
 import { classifyKind } from '@/domain/models/workspace'
 import { validateConnection } from '@/domain/services/connection-rules'
 import { OllamaClient } from '@/data/ai/ollama-client'
-import { checkConsistency, summarizeDocument } from '@/data/ai/ai-service'
+import { checkConsistency, suggestEdits, summarizeDocument } from '@/data/ai/ai-service'
 import type { AiClient } from '@/data/ai/ai-client'
 import { QueryTrackerRepository } from '@/data/repositories/query-tracker-repository'
 import { canTransition } from '@/domain/services/submission-workflow'
@@ -260,6 +260,11 @@ const api: DataApi = {
   async summarizeDocument(relPath: string, model: string) {
     const open = requireOpen()
     return summarizeDocument({ store: open.store, db: open.db, ai: aiClient }, relPath, model)
+  },
+
+  async suggestEdits(relPath: string, model: string) {
+    const open = requireOpen()
+    return suggestEdits({ store: open.store, db: open.db, ai: aiClient }, relPath, model)
   },
 
   async checkConsistency(model: string) {

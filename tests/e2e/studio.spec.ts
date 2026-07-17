@@ -26,14 +26,11 @@ test('create a note, edit it, save, and it persists to disk', async ({ page }) =
     timeout: 15_000,
   })
 
-  // Type in the rich editor and save.
+  // Type in the rich editor; autosave persists it (no manual save needed).
   const editor = page.locator('.ProseMirror')
   await editor.click()
   await editor.pressSequentially('Spice and sand across the dunes.')
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Saved', exact: true })).toBeVisible({
-    timeout: 15_000,
-  })
+  await expect(page.locator('.save-status')).toHaveText('Saved', { timeout: 15_000 })
 
   // The Markdown file exists on disk with frontmatter id + the edited body.
   const fileText = await page.evaluate(async () => {
