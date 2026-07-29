@@ -49,20 +49,23 @@ export class SourceRepository {
     return row ? toRecord(row) : null
   }
 
-  /** Full-text search over extracted source text, best matches first. */
-  search(query: string, limit = 20): SourceRecord[] {
+  /** Full-text search over extracted source text, best matches first. Optionally narrowed to a
+   *  path prefix (used to scope search to one space). */
+  search(query: string, limit = 20, pathPrefix?: string): SourceRecord[] {
     const cols = COLUMNS.split(', ')
       .map((c) => `s.${c}`)
       .join(', ')
+    const prefixClause = pathPrefix !== undefined ? 'AND s.rel_path LIKE ?' : ''
+    const params = pathPrefix !== undefined ? [query, `${pathPrefix}%`, limit] : [query, limit]
     return this.db
       .selectRows<SourceRow>(
         `SELECT ${cols}
            FROM source_files_fts f
            JOIN source_files s ON s.id = f.rowid
-          WHERE source_files_fts MATCH ?
+          WHERE source_files_fts MATCH ? ${prefixClause}
           ORDER BY rank
           LIMIT ?;`,
-        [query, limit],
+        params,
       )
       .map(toRecord)
   }

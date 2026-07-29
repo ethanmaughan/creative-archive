@@ -7,6 +7,7 @@ import { useSession } from './store/session'
 
 const NAV: readonly { to: string; label: string; end: boolean }[] = [
   { to: '/', label: 'Studio', end: true },
+  { to: '/spaces', label: 'Spaces', end: false },
   { to: '/files', label: 'Files', end: false },
   { to: '/library', label: 'Library', end: false },
   { to: '/connections', label: 'Connections', end: false },

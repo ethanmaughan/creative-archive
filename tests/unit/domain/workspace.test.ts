@@ -6,13 +6,13 @@ describe('workspace classification', () => {
     expect(classifyKind('library/dune.md')).toBe('library-item')
     expect(classifyKind('story-bible/characters/mara.md')).toBe('character')
     expect(classifyKind('story-bible/locations/arrakis.md')).toBe('location')
-    expect(classifyKind('projects/glass/manuscript/01.md')).toBe('manuscript')
-    expect(classifyKind('projects/glass/scenes/s1.md')).toBe('scene')
+    expect(classifyKind('spaces/glass/manuscript/01.md')).toBe('manuscript')
+    expect(classifyKind('spaces/glass/scenes/s1.md')).toBe('scene')
     expect(classifyKind('research/topic.md')).toBe('research')
   })
 
   it('maps paths to workspaces with protection', () => {
-    expect(workspaceForPath('projects/x/manuscript/01.md')?.protection).toBe('canonical')
+    expect(workspaceForPath('spaces/x/manuscript/01.md')?.protection).toBe('canonical')
     expect(workspaceForPath('workspaces/scratch/a.md')?.protection).toBe('writable')
     expect(workspaceForPath('unknown/a.md')).toBeUndefined()
   })

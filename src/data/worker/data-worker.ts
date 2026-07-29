@@ -19,6 +19,7 @@ import { reconcileSources } from '@/data/ingest/reconcile-sources'
 import { extractText } from '@/data/ingest/extract-text'
 import { DocumentRepository, type DocumentRecord } from '@/data/repositories/document-repository'
 import { SourceRepository } from '@/data/repositories/source-repository'
+import { SpaceRepository } from '@/data/repositories/space-repository'
 import { LibraryRepository } from '@/data/repositories/library-repository'
 import { ExtractionRepository } from '@/data/repositories/extraction-repository'
 import { ConnectionRepository } from '@/data/repositories/connection-repository'
@@ -31,6 +32,7 @@ import {
   isTextExtractable,
   type SourceCategory,
 } from '@/domain/models/source-file'
+import { spaceMarkerPath, spacePathPrefix, subfolderForSpaceKind } from '@/domain/models/space'
 import { validateConnection } from '@/domain/services/connection-rules'
 import { OllamaClient } from '@/data/ai/ollama-client'
 import { checkConsistency, suggestEdits, summarizeDocument } from '@/data/ai/ai-service'
@@ -47,6 +49,8 @@ import type {
   CreateConnectionInput,
   CreateMarketInput,
   CreateSubmissionInput,
+  CreateSpaceInput,
+  CreateSpaceDocInput,
   DataApi,
   DocumentContent,
   DocumentDTO,
@@ -54,6 +58,7 @@ import type {
   SaveDocumentPatch,
   SearchResultDTO,
   SourceContentDTO,
+  SpaceDTO,
   TreeEntryDTO,
 } from './types'
 
@@ -61,6 +66,7 @@ let db: Sqlite | null = null
 let store: FsaFileStore | null = null
 let documents: DocumentRepository | null = null
 let sources: SourceRepository | null = null
+let spaces: SpaceRepository | null = null
 let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
 let connections: ConnectionRepository | null = null
@@ -114,6 +120,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     applyMigrations(db, MIGRATIONS)
     documents = new DocumentRepository(db)
     sources = new SourceRepository(db)
+    spaces = new SpaceRepository(db)
     library = new LibraryRepository(db)
     extraction = new ExtractionRepository(db)
     connections = new ConnectionRepository(db)
@@ -142,12 +149,15 @@ const api: DataApi = {
     return documents ? documents.all().map(toDto) : []
   },
 
-  async search(query: string, kind?: string) {
+  async search(query: string, kind?: string, scope?: string) {
     if (!store) return []
     const fts = toFtsQuery(query)
     if (fts === '') return []
     const terms = queryTerms(query)
     const results: SearchResultDTO[] = []
+
+    // A `scope` is a space slug — narrow every hit to that space's folder.
+    const pathPrefix = scope !== undefined && scope !== '' ? spacePathPrefix(scope) : undefined
 
     // `kind === 'source'` narrows to uploaded files; any other kind narrows to that document
     // kind; omitting kind searches both documents and sources.
@@ -159,6 +169,7 @@ const api: DataApi = {
       const hits = documents.search(fts, {
         limit: 20,
         ...(docKind !== undefined ? { kind: docKind } : {}),
+        ...(pathPrefix !== undefined ? { pathPrefix } : {}),
       })
       for (const hit of hits) {
         let snippet = ''
@@ -179,7 +190,7 @@ const api: DataApi = {
     }
 
     if (wantSources && sources) {
-      for (const hit of sources.search(fts, 20)) {
+      for (const hit of sources.search(fts, 20, pathPrefix)) {
         let snippet = ''
         try {
           const { text } = await extractText(store, hit.relPath, hit.category as SourceCategory)
@@ -207,6 +218,7 @@ const api: DataApi = {
         relPath: d.relPath,
         name: basenameOf(d.relPath),
         nodeKind: 'document',
+        title: d.title,
         docKind: d.kind,
       })
     }
@@ -288,6 +300,48 @@ const api: DataApi = {
     const data: Record<string, unknown> = ensureId({ title: input.title }, () => id).data
     const content = serializeFrontmatter(data, '')
     await open.store.writeTextFile(relPath, content)
+    await reindexOne(open.store, open.db, relPath)
+    return toContent(relPath, data, '')
+  },
+
+  async listSpaces() {
+    return spaces ? spaces.all() : []
+  },
+
+  async createSpace(input: CreateSpaceInput): Promise<SpaceDTO> {
+    const open = requireOpen()
+    const id = crypto.randomUUID()
+    const base = slugify(input.title)
+    let slug = base
+    if (await open.store.stat(spaceMarkerPath(slug))) slug = `${base}-${id.slice(0, 8)}`
+    const relPath = spaceMarkerPath(slug)
+    const data: Record<string, unknown> = { id, title: input.title, spaceType: input.spaceType }
+    await open.store.writeTextFile(relPath, serializeFrontmatter(data, ''))
+    await reindexOne(open.store, open.db, relPath)
+    return { id, slug, relPath, title: input.title, spaceType: input.spaceType, docCount: 0 }
+  },
+
+  async createSpaceDocument(input: CreateSpaceDocInput) {
+    const open = requireOpen()
+    const id = crypto.randomUUID()
+    const folder = `spaces/${input.spaceSlug}/${subfolderForSpaceKind(input.kind)}`
+    const slug = slugify(input.title)
+    // Manuscript chapters get a numeric filename prefix so they order in the folder and index.
+    let prefix = ''
+    if (input.kind === 'manuscript') {
+      const n =
+        open.db.selectRows<{ n: number }>(
+          'SELECT count(*) AS n FROM documents WHERE rel_path LIKE ?;',
+          [`${folder}/%`],
+        )[0]?.n ?? 0
+      prefix = `${String((n + 1) * 10).padStart(3, '0')}-`
+    }
+    let relPath = `${folder}/${prefix}${slug}.md`
+    if (await open.store.stat(relPath)) {
+      relPath = `${folder}/${prefix}${slug}-${id.slice(0, 8)}.md`
+    }
+    const data: Record<string, unknown> = ensureId({ title: input.title }, () => id).data
+    await open.store.writeTextFile(relPath, serializeFrontmatter(data, ''))
     await reindexOne(open.store, open.db, relPath)
     return toContent(relPath, data, '')
   },

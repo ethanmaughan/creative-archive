@@ -1,6 +1,6 @@
 import { useState, type JSX } from 'react'
-import { Link } from 'react-router-dom'
-import { useSearch } from '@/data/worker/hooks'
+import { Link, useSearchParams } from 'react-router-dom'
+import { useSearch, useSpaces } from '@/data/worker/hooks'
 import { queryTerms } from '@/data/worker/fts-query'
 import { DOCUMENT_KINDS } from '@/domain/models/document'
 import { Spinner } from '@/shared/ui/Spinner'
@@ -21,9 +21,12 @@ function Highlighted({ text, terms }: { text: string; terms: readonly string[] }
 }
 
 export function SearchPage(): JSX.Element {
+  const [searchParams] = useSearchParams()
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<string | null>(null)
-  const { data, isFetching } = useSearch(query, kind)
+  const [scope, setScope] = useState<string | null>(searchParams.get('space'))
+  const { data: spaces } = useSpaces()
+  const { data, isFetching } = useSearch(query, kind, scope)
 
   const trimmed = query.trim()
   const terms = queryTerms(query)
@@ -59,6 +62,21 @@ export function SearchPage(): JSX.Element {
           ))}
           <option value="source">Uploaded files</option>
         </select>
+        {spaces && spaces.length > 0 ? (
+          <select
+            className="newdoc__select"
+            value={scope ?? ''}
+            onChange={(event) => setScope(event.target.value === '' ? null : event.target.value)}
+            aria-label="Search scope"
+          >
+            <option value="">All spaces</option>
+            {spaces.map((space) => (
+              <option key={space.id} value={space.slug}>
+                {space.title ?? space.slug}
+              </option>
+            ))}
+          </select>
+        ) : null}
       </div>
 
       {trimmed !== '' && !isFetching && results.length === 0 ? (

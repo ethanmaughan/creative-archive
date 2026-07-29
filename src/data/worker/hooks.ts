@@ -16,6 +16,8 @@ import type {
   CreateDocumentInput,
   CreateLibraryItemInput,
   CreateMarketInput,
+  CreateSpaceDocInput,
+  CreateSpaceInput,
   CreateSubmissionInput,
   DocumentContent,
   DocumentDTO,
@@ -25,6 +27,7 @@ import type {
   MarketDTO,
   SearchResultDTO,
   SourceContentDTO,
+  SpaceDTO,
   SubmissionDTO,
   TreeEntryDTO,
 } from './types'
@@ -55,13 +58,54 @@ export function useSource(relPath: string | null): UseQueryResult<SourceContentD
   })
 }
 
-export function useSearch(query: string, kind: string | null): UseQueryResult<SearchResultDTO[]> {
+export function useSearch(
+  query: string,
+  kind: string | null,
+  scope: string | null = null,
+): UseQueryResult<SearchResultDTO[]> {
   const ready = useSession((s) => s.status === 'ready')
   const trimmed = query.trim()
   return useQuery({
-    queryKey: ['search', trimmed, kind],
-    queryFn: () => getDataClient().search(trimmed, kind ?? undefined),
+    queryKey: ['search', trimmed, kind, scope],
+    queryFn: () => getDataClient().search(trimmed, kind ?? undefined, scope ?? undefined),
     enabled: ready && trimmed.length > 0,
+  })
+}
+
+export function useSpaces(): UseQueryResult<SpaceDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['spaces'],
+    queryFn: () => getDataClient().listSpaces(),
+    enabled: ready,
+  })
+}
+
+export function useCreateSpace(): UseMutationResult<SpaceDTO, Error, CreateSpaceInput> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateSpaceInput) => getDataClient().createSpace(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['spaces'] })
+      void queryClient.invalidateQueries({ queryKey: ['documents'] })
+      void queryClient.invalidateQueries({ queryKey: ['tree'] })
+    },
+  })
+}
+
+export function useCreateSpaceDocument(): UseMutationResult<
+  DocumentContent,
+  Error,
+  CreateSpaceDocInput
+> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateSpaceDocInput) => getDataClient().createSpaceDocument(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['spaces'] })
+      void queryClient.invalidateQueries({ queryKey: ['documents'] })
+      void queryClient.invalidateQueries({ queryKey: ['tree'] })
+    },
   })
 }
 

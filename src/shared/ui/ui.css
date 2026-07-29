@@ -1001,3 +1001,16 @@
   letter-spacing: 0.02em;
   margin-top: 0.15rem;
 }
+
+/* ---------- space view ---------- */
+.space-section {
+  margin-top: 1.6rem;
+}
+.space-section__title {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.6rem;
+}
