@@ -1,7 +1,8 @@
-import type { JSX } from 'react'
+import { useEffect, type JSX } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { ThemeToggle } from '@/shared/ui/ThemeToggle'
 import { OpenArchiveGate } from './OpenArchiveGate'
+import { useOpenArchive } from './use-open-archive'
 import { useSession } from './store/session'
 
 const NAV: readonly { to: string; label: string; end: boolean }[] = [
@@ -23,6 +24,12 @@ export function Shell(): JSX.Element {
   const status = useSession((s) => s.status)
   const archiveName = useSession((s) => s.archiveName)
   const docCount = useSession((s) => s.docCount)
+  const { restore } = useOpenArchive()
+
+  // On first load, reconnect to the remembered folder if permission is still granted.
+  useEffect(() => {
+    void restore()
+  }, [restore])
 
   return (
     <div className="shell">

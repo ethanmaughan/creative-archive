@@ -1,5 +1,5 @@
-/** Session state: which archive is open and its status. In-memory for now (re-open each
- *  session); persisting the directory handle via IndexedDB is a later nicety. */
+/** Session state: which archive is open and its status. The chosen folder is remembered
+ *  across sessions via IndexedDB (see handle-store); `savedArchiveName` reflects that. */
 import { create } from 'zustand'
 
 export type ArchiveStatus = 'idle' | 'opening' | 'ready' | 'error'
@@ -18,12 +18,15 @@ interface SessionState {
   docCount: number
   error: string | null
   aiModel: string
+  /** Name of the remembered folder (from IndexedDB), if any — powers the "Reopen" gate. */
+  savedArchiveName: string | null
   reset: () => void
   setOpening: () => void
   setReady: (archiveName: string, docCount: number) => void
   setError: (message: string) => void
   setDocCount: (docCount: number) => void
   setAiModel: (model: string) => void
+  setSavedArchiveName: (name: string | null) => void
 }
 
 export const useSession = create<SessionState>((set) => ({
@@ -32,6 +35,8 @@ export const useSession = create<SessionState>((set) => ({
   docCount: 0,
   error: null,
   aiModel: initialAiModel(),
+  savedArchiveName: null,
+  setSavedArchiveName: (savedArchiveName) => set({ savedArchiveName }),
   reset: () => set({ status: 'idle', error: null }),
   setOpening: () => set({ status: 'opening', error: null }),
   setReady: (archiveName, docCount) => set({ status: 'ready', archiveName, docCount, error: null }),
