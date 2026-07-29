@@ -292,8 +292,8 @@ const api: DataApi = {
     return toContent(relPath, data, '')
   },
 
-  async listLibraryItems() {
-    return library ? library.all() : []
+  async listLibraryItems(sort) {
+    return library ? library.all(sort) : []
   },
 
   async createLibraryItem(input: CreateLibraryItemInput) {
@@ -313,6 +313,11 @@ const api: DataApi = {
     if (input.creator !== undefined) data['creator'] = input.creator
     if (input.year !== undefined) data['year'] = input.year
     if (input.rating !== undefined) data['rating'] = input.rating
+    if (input.consumedOn !== undefined && input.consumedOn !== '') {
+      data['consumedOn'] = input.consumedOn
+    }
+    // The app stamps when the entry was logged (date + time); the user never types this.
+    data['logged'] = new Date().toISOString()
     const content = serializeFrontmatter(data, '')
     await open.store.writeTextFile(relPath, content)
     await reindexOne(open.store, open.db, relPath)

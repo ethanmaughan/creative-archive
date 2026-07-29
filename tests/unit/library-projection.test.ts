@@ -33,6 +33,35 @@ describe('library projection', () => {
     })
   })
 
+  it('projects consumedOn and logged from frontmatter', async () => {
+    const fs = new MemoryFileStore({
+      'library/movie/arrival.md':
+        '---\nid: m1\ntitle: Arrival\nmediaType: movie\nconsumedOn: 2026-05-02\nlogged: 2026-05-03T14:00:00Z\n---\n.\n',
+    })
+    await reconcile(fs, db, { now })
+    const item = new LibraryRepository(db).all()[0]
+    expect(item?.consumedOn).toBe('2026-05-02')
+    expect(item?.logged).toBe('2026-05-03T14:00:00Z')
+  })
+
+  it('sorts chronologically by the chosen date, with missing dates last', async () => {
+    const fs = new MemoryFileStore({
+      'library/book/a.md':
+        '---\nid: a\ntitle: A\nmediaType: book\nconsumedOn: 2026-01-10\n---\n.\n',
+      'library/book/b.md':
+        '---\nid: b\ntitle: B\nmediaType: book\nconsumedOn: 2026-03-20\n---\n.\n',
+      'library/book/c.md': '---\nid: c\ntitle: C\nmediaType: book\n---\n.\n', // no consumed date
+    })
+    await reconcile(fs, db, { now })
+    const repo = new LibraryRepository(db)
+
+    const newest = repo.all({ by: 'consumed', dir: 'desc' }).map((i) => i.title)
+    expect(newest).toEqual(['B', 'A', 'C']) // C (no date) always last
+
+    const oldest = repo.all({ by: 'consumed', dir: 'asc' }).map((i) => i.title)
+    expect(oldest).toEqual(['A', 'B', 'C']) // C still last, not first
+  })
+
   it('quarantines (indexes the doc, skips the projection) when mediaType is invalid', async () => {
     const fs = new MemoryFileStore({
       'library/book/mystery.md': '---\nid: b2\ntitle: Mystery\n---\nNo media type.\n',

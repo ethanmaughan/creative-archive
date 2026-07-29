@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test'
 
-// Log a library item through the UI and confirm the typed projection + the file on disk.
-test('log a library item and see it typed in the Library', async ({ page }) => {
+// Log library items (with a consumed date) through the UI and confirm the typed projection,
+// the file on disk, the logged timestamp, and chronological sorting.
+test('log library items with dates and sort them chronologically', async ({ page }) => {
   await page.goto('/?e2e=1')
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory()
@@ -17,21 +18,29 @@ test('log a library item and see it typed in the Library', async ({ page }) => {
   await page.getByRole('link', { name: 'Library', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Library' })).toBeVisible()
 
-  // Log a book.
-  await page.getByRole('button', { name: '+ Log' }).click()
-  await page.getByLabel('Title').fill('Dune')
-  await page.getByLabel('Creator').fill('Frank Herbert')
-  await page.getByLabel('Year').fill('1965')
-  await page.getByRole('button', { name: 'Log', exact: true }).click()
+  const logBook = async (title: string, consumed: string): Promise<void> => {
+    await page.getByRole('button', { name: '+ Log' }).click()
+    await page.getByLabel('Title').fill(title)
+    await page.getByLabel('Date consumed').fill(consumed)
+    await page.getByRole('button', { name: 'Log', exact: true }).click()
+    await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15_000 })
+    await page.getByRole('link', { name: 'Library', exact: true }).click()
+  }
 
-  // Lands on the document view for the new item.
-  await expect(page.getByRole('heading', { name: 'Dune' })).toBeVisible({ timeout: 15_000 })
+  await logBook('Dune', '2026-05-01')
+  await logBook('Nemesis', '2026-06-01')
 
-  // Back in the Library it shows with typed metadata.
-  await page.getByRole('link', { name: 'Library', exact: true }).click()
-  await expect(page.getByText('Frank Herbert · 1965')).toBeVisible({ timeout: 15_000 })
+  // The consumed date surfaces in the list.
+  await expect(page.getByText(/Consumed .*2026/).first()).toBeVisible({ timeout: 15_000 })
 
-  // The file exists on disk under library/book/ with media frontmatter.
+  // Default sort is by consumed date, newest first → Nemesis (June) before Dune (May).
+  await expect(page.locator('.doc__title').first()).toHaveText('Nemesis')
+
+  // Flip to oldest first → Dune (May) leads.
+  await page.getByLabel('Order').selectOption('asc')
+  await expect(page.locator('.doc__title').first()).toHaveText('Dune')
+
+  // The file on disk carries both the user's consumed date and the app-stamped logged time.
   const fileText = await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory()
     const lib = await root.getDirectoryHandle('library')
@@ -40,5 +49,7 @@ test('log a library item and see it typed in the Library', async ({ page }) => {
     return (await handle.getFile()).text()
   })
   expect(fileText).toContain('mediaType: book')
-  expect(fileText).toContain('creator: Frank Herbert')
+  expect(fileText).toContain('consumedOn:')
+  expect(fileText).toContain('2026-05-01')
+  expect(fileText).toContain('logged:')
 })

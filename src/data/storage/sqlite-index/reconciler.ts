@@ -189,14 +189,15 @@ function syncLibraryProjection(
   const year = typeof data['year'] === 'number' ? data['year'] : null
   const consumedOn = typeof data['consumedOn'] === 'string' ? data['consumedOn'] : null
   const rating = typeof data['rating'] === 'number' ? data['rating'] : null
+  const logged = typeof data['logged'] === 'string' ? data['logged'] : null
 
   db.run(
-    `INSERT INTO library_items (document_id, media_type, creator, year, consumed_on, rating)
-     VALUES (?, ?, ?, ?, ?, ?)
+    `INSERT INTO library_items (document_id, media_type, creator, year, consumed_on, rating, logged)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(document_id) DO UPDATE SET
        media_type = excluded.media_type, creator = excluded.creator, year = excluded.year,
-       consumed_on = excluded.consumed_on, rating = excluded.rating;`,
-    [documentId, mediaType as string, creator, year, consumedOn, rating],
+       consumed_on = excluded.consumed_on, rating = excluded.rating, logged = excluded.logged;`,
+    [documentId, mediaType as string, creator, year, consumedOn, rating, logged],
   )
 }
 

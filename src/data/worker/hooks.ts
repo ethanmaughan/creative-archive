@@ -21,6 +21,7 @@ import type {
   DocumentDTO,
   FacetDTO,
   LibraryItemDTO,
+  LibrarySort,
   MarketDTO,
   SearchResultDTO,
   SourceContentDTO,
@@ -106,11 +107,11 @@ export function useCreateDocument(): UseMutationResult<
   })
 }
 
-export function useLibraryItems(): UseQueryResult<LibraryItemDTO[]> {
+export function useLibraryItems(sort?: LibrarySort): UseQueryResult<LibraryItemDTO[]> {
   const ready = useSession((s) => s.status === 'ready')
   return useQuery({
-    queryKey: ['library'],
-    queryFn: () => getDataClient().listLibraryItems(),
+    queryKey: ['library', sort?.by ?? null, sort?.dir ?? null],
+    queryFn: () => getDataClient().listLibraryItems(sort),
     enabled: ready,
   })
 }

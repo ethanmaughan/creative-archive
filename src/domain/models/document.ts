@@ -52,6 +52,10 @@ export const libraryItemFrontmatterSchema = baseFrontmatterSchema.extend({
   creator: z.string().optional(),
   year: z.number().int().optional(),
   rating: z.number().int().min(1).max(5).optional(),
+  /** User-entered date the media was consumed (YYYY-MM-DD). */
+  consumedOn: z.string().optional(),
+  /** App-stamped ISO datetime the entry was logged. */
+  logged: z.string().optional(),
 })
 
 /** The schema to validate each document kind's frontmatter against. */
