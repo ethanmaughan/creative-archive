@@ -13,9 +13,10 @@ async function resolveTestHandle(): Promise<FileSystemDirectoryHandle | undefine
 }
 
 export function OpenArchiveGate(): JSX.Element {
-  const { open, supported } = useOpenArchive()
+  const { open, reopenSaved, supported } = useOpenArchive()
   const status = useSession((s) => s.status)
   const error = useSession((s) => s.error)
+  const savedArchiveName = useSession((s) => s.savedArchiveName)
 
   const handleOpen = (): void => {
     void resolveTestHandle().then((handle) => open(handle))
@@ -28,6 +29,27 @@ export function OpenArchiveGate(): JSX.Element {
           <Spinner /> Opening and indexing your archive…
         </div>
       </div>
+    )
+  }
+
+  // A folder was remembered from a previous session — offer to reconnect in one click.
+  if (savedArchiveName !== null) {
+    return (
+      <EmptyState mark="❧" title="Welcome back">
+        <p className="empty__body">
+          Reopen <strong>{savedArchiveName}</strong> to pick up where you left off. Your browser may
+          ask you to allow access again — that grant stays on this machine.
+        </p>
+        <Button onClick={() => void reopenSaved()} disabled={!supported}>
+          Reopen {savedArchiveName}
+        </Button>
+        <Button variant="ghost" onClick={handleOpen} disabled={!supported}>
+          Open a different folder…
+        </Button>
+        {status === 'error' && error ? (
+          <p className="note">Couldn’t open the archive: {error}</p>
+        ) : null}
+      </EmptyState>
     )
   }
 
