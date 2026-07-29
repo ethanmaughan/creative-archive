@@ -12,6 +12,7 @@ export function NewLibraryItemButton(): JSX.Element {
   const [creator, setCreator] = useState('')
   const [year, setYear] = useState('')
   const [rating, setRating] = useState('')
+  const [consumedOn, setConsumedOn] = useState('')
   const create = useCreateLibraryItem()
   const navigate = useNavigate()
 
@@ -27,6 +28,7 @@ export function NewLibraryItemButton(): JSX.Element {
         ...(creator.trim() !== '' ? { creator: creator.trim() } : {}),
         ...(yearNum !== undefined && !Number.isNaN(yearNum) ? { year: yearNum } : {}),
         ...(ratingNum !== undefined && !Number.isNaN(ratingNum) ? { rating: ratingNum } : {}),
+        ...(consumedOn !== '' ? { consumedOn } : {}),
       },
       {
         onSuccess: (doc) => {
@@ -35,6 +37,7 @@ export function NewLibraryItemButton(): JSX.Element {
           setCreator('')
           setYear('')
           setRating('')
+          setConsumedOn('')
           void navigate(`/doc/${doc.relPath}`)
         },
       },
@@ -102,6 +105,14 @@ export function NewLibraryItemButton(): JSX.Element {
           </option>
         ))}
       </select>
+      <input
+        className="newdoc__input newdoc__input--sm"
+        type="date"
+        value={consumedOn}
+        onChange={(event) => setConsumedOn(event.target.value)}
+        aria-label="Date consumed"
+        title="Date consumed"
+      />
       <Button onClick={submit} disabled={create.isPending || title.trim() === ''}>
         Log
       </Button>

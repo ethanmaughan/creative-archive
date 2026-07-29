@@ -83,6 +83,16 @@ export interface LibraryItemDTO {
   readonly creator: string | null
   readonly year: number | null
   readonly rating: number | null
+  /** User-entered date consumed (YYYY-MM-DD), or null. */
+  readonly consumedOn: string | null
+  /** App-stamped ISO datetime the entry was logged, or null. */
+  readonly logged: string | null
+}
+
+/** How to order the library list. Rows missing the chosen date always sort last. */
+export interface LibrarySort {
+  readonly by: 'consumed' | 'logged'
+  readonly dir: 'asc' | 'desc'
 }
 
 export interface CreateLibraryItemInput {
@@ -91,6 +101,8 @@ export interface CreateLibraryItemInput {
   readonly creator?: string
   readonly year?: number
   readonly rating?: number
+  /** Date the media was consumed (YYYY-MM-DD). */
+  readonly consumedOn?: string
 }
 
 /** A single creative-extraction facet entry, joined to its source document. */
@@ -194,8 +206,8 @@ export interface DataApi {
   saveDocument(relPath: string, patch: SaveDocumentPatch): Promise<DocumentContent>
   /** Create a new document with a fresh UUID in the folder for its kind. */
   createDocument(input: CreateDocumentInput): Promise<DocumentContent>
-  /** List typed library items (from the library_items projection). */
-  listLibraryItems(): Promise<LibraryItemDTO[]>
+  /** List typed library items (from the library_items projection), optionally sorted by date. */
+  listLibraryItems(sort?: LibrarySort): Promise<LibraryItemDTO[]>
   /** Create a new library item file with media metadata in its frontmatter. */
   createLibraryItem(input: CreateLibraryItemInput): Promise<DocumentContent>
   /** List creative-extraction facets, optionally filtered to one facet kind. */

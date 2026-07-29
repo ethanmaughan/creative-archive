@@ -89,6 +89,8 @@ export const libraryItems = sqliteTable('library_items', {
   year: integer('year'),
   consumedOn: text('consumed_on'),
   rating: integer('rating'),
+  /** ISO datetime the entry was logged in the app (migration 0004). */
+  logged: text('logged'),
 })
 
 /** Queryable slices of creative extraction, derived from library-item file sections. */
