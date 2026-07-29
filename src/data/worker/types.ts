@@ -1,5 +1,6 @@
 /** The typed contract between the UI (main thread) and the data worker. */
 import type { MediaType } from '@/domain/models/document'
+import type { SpaceDocKind, SpaceType } from '@/domain/models/space'
 import type { MarketKind } from '@/domain/models/market'
 import type { SubmissionStatus } from '@/domain/models/submission'
 
@@ -41,6 +42,8 @@ export interface TreeEntryDTO {
   readonly relPath: string
   readonly name: string
   readonly nodeKind: 'document' | 'source'
+  /** Human title (authored documents); falls back to the filename in the UI. */
+  readonly title?: string | null
   /** Document kind, for `nodeKind: 'document'`. */
   readonly docKind?: string
   /** Source category (text | docx | pdf | image | other), for `nodeKind: 'source'`. */
@@ -66,6 +69,27 @@ export type CreatableKind = 'character' | 'location' | 'note' | 'research'
 
 export interface CreateDocumentInput {
   readonly kind: CreatableKind
+  readonly title: string
+}
+
+/** A user-created space (projected from its `space.md`). */
+export interface SpaceDTO {
+  readonly id: string
+  readonly slug: string
+  readonly relPath: string
+  readonly title: string | null
+  readonly spaceType: string
+  readonly docCount: number
+}
+
+export interface CreateSpaceInput {
+  readonly title: string
+  readonly spaceType: SpaceType
+}
+
+export interface CreateSpaceDocInput {
+  readonly spaceSlug: string
+  readonly kind: SpaceDocKind
   readonly title: string
 }
 
@@ -198,8 +222,15 @@ export interface DataApi {
   /** Raw bytes of a source file (for image preview), or null if missing. */
   readSourceBytes(relPath: string): Promise<Uint8Array | null>
   /** Full-text search with body snippets, optionally filtered by document kind. Pass the
-   *  sentinel kind `'source'` to search only uploaded files; omit to search everything. */
-  search(query: string, kind?: string): Promise<SearchResultDTO[]>
+   *  sentinel kind `'source'` to search only uploaded files; omit to search everything. Pass a
+   *  space slug as `scope` to narrow results to that space. */
+  search(query: string, kind?: string, scope?: string): Promise<SearchResultDTO[]>
+  /** List user-created spaces. */
+  listSpaces(): Promise<SpaceDTO[]>
+  /** Create a new space (writes `spaces/<slug>/space.md`). */
+  createSpace(input: CreateSpaceInput): Promise<SpaceDTO>
+  /** Create an authored document inside a space, in the subfolder for its kind. */
+  createSpaceDocument(input: CreateSpaceDocInput): Promise<DocumentContent>
   /** Read a document's content (frontmatter + body), or null if missing. */
   readDocument(relPath: string): Promise<DocumentContent | null>
   /** Write a document's body (and optionally title) back to its file, then re-index it. */

@@ -39,20 +39,20 @@ beforeEach(async () => {
 describe('AI service', () => {
   it('summarizes into a writable workspace and never mutates canon', async () => {
     const store = new MemoryFileStore({
-      'projects/glass/manuscript/01.md':
+      'spaces/glass/manuscript/01.md':
         '---\nid: ch1\ntitle: Chapter One\n---\nMara arrives at the glass house.\n',
     })
     await reconcile(store, db, { now, generateId })
     const ai = new FakeAi('A concise summary.')
     const deps: AiDeps = { store, db, ai, now, generateId }
 
-    const result = await summarizeDocument(deps, 'projects/glass/manuscript/01.md', 'test-model')
+    const result = await summarizeDocument(deps, 'spaces/glass/manuscript/01.md', 'test-model')
 
     expect(result.workspacePath.startsWith('workspaces/')).toBe(true)
     expect(result.content).toBe('A concise summary.')
     expect(store.peek(result.workspacePath)).toContain('A concise summary.')
     // canon body untouched
-    expect(store.peek('projects/glass/manuscript/01.md')).toContain(
+    expect(store.peek('spaces/glass/manuscript/01.md')).toContain(
       'Mara arrives at the glass house.',
     )
     // ai_run logged (layer 3 trigger allowed it → writable workspace)
@@ -66,18 +66,18 @@ describe('AI service', () => {
 
   it('writes edit suggestions to a workspace without touching the document', async () => {
     const store = new MemoryFileStore({
-      'projects/glass/manuscript/01.md':
+      'spaces/glass/manuscript/01.md':
         '---\nid: ch1\ntitle: Chapter One\n---\nMara arrives at the glass house.\n',
     })
     await reconcile(store, db, { now, generateId })
     const result = await suggestEdits(
       { store, db, ai: new FakeAi('1. Tighten the opening line.'), now, generateId },
-      'projects/glass/manuscript/01.md',
+      'spaces/glass/manuscript/01.md',
       'test-model',
     )
     expect(result.workspacePath).toBe('workspaces/ai/suggestions/chapter-one.md')
     expect(store.peek(result.workspacePath)).toContain('Tighten the opening line.')
-    expect(store.peek('projects/glass/manuscript/01.md')).toContain(
+    expect(store.peek('spaces/glass/manuscript/01.md')).toContain(
       'Mara arrives at the glass house.',
     )
     expect(

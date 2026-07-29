@@ -14,7 +14,7 @@ export interface WorkspaceDef {
 }
 
 export const WORKSPACE_DEFS: readonly WorkspaceDef[] = [
-  { id: 'ws-projects', name: 'Projects', relPath: 'projects', protection: 'canonical' },
+  { id: 'ws-spaces', name: 'Spaces', relPath: 'spaces', protection: 'canonical' },
   { id: 'ws-story-bible', name: 'Story Bible', relPath: 'story-bible', protection: 'canonical' },
   { id: 'ws-library', name: 'Library', relPath: 'library', protection: 'canonical' },
   { id: 'ws-research', name: 'Research', relPath: 'research', protection: 'canonical' },
@@ -45,9 +45,11 @@ export function classifyKind(relPath: string): DocumentKind {
   if (relPath.startsWith('story-bible/locations/')) return 'location'
   if (relPath.startsWith('research/')) return 'research'
   if (relPath.startsWith('notebook/')) return 'note'
-  const inProject = /^projects\/[^/]+\/([^/]+)\//.exec(relPath)
-  if (inProject) {
-    switch (inProject[1]) {
+  const inSpace = /^spaces\/[^/]+\/(.+)$/.exec(relPath)
+  if (inSpace) {
+    const rest = inSpace[1] ?? ''
+    if (rest === 'space.md') return 'space'
+    switch (rest.split('/')[0]) {
       case 'manuscript':
         return 'manuscript'
       case 'scenes':

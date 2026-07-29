@@ -1,4 +1,5 @@
 const LABELS: Record<string, string> = {
+  space: 'Space',
   manuscript: 'Manuscript',
   scene: 'Scene',
   note: 'Note',

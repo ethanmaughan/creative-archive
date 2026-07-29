@@ -25,7 +25,7 @@ function connectionCount(): number {
 describe('reconciler', () => {
   it('indexes markdown files, injects missing UUIDs, and classifies them', async () => {
     const fs = new MemoryFileStore({
-      'projects/glass/manuscript/01.md': '# Chapter One\nText.\n',
+      'spaces/glass/manuscript/01.md': '# Chapter One\nText.\n',
       'story-bible/characters/mara.md': '---\ntitle: Mara\n---\nA character.\n',
       'attachments/cover.png': 'binary', // ignored: not markdown
       'notes-outside.md': 'ignored: unknown top-level dir',
@@ -36,7 +36,7 @@ describe('reconciler', () => {
     expect(result.inserted).toBe(2)
     expect(docCount()).toBe(2)
     // UUID injected back into the file that had none
-    expect(fs.peek('projects/glass/manuscript/01.md')).toContain('id: id-1')
+    expect(fs.peek('spaces/glass/manuscript/01.md')).toContain('id: id-1')
 
     const mara = db.selectRows<{ kind: string; workspace_id: string }>(
       "SELECT kind, workspace_id FROM documents WHERE rel_path = 'story-bible/characters/mara.md';",

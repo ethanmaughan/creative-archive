@@ -18,7 +18,7 @@ beforeEach(async () => {
 function seedDocs(): Promise<unknown> {
   const fs = new MemoryFileStore({
     'story-bible/characters/mara.md': '---\nid: mara\ntitle: Mara\n---\nx\n',
-    'projects/glass/manuscript/01.md': '---\nid: ch1\ntitle: Chapter One\n---\ny\n',
+    'spaces/glass/manuscript/01.md': '---\nid: ch1\ntitle: Chapter One\n---\ny\n',
   })
   return reconcile(fs, db, { now })
 }
@@ -89,7 +89,7 @@ describe('connection graph', () => {
       createdAt: now(),
     })
     const fs = new MemoryFileStore({
-      'projects/glass/manuscript/01.md': '---\nid: ch1\ntitle: Chapter One\n---\ny\n',
+      'spaces/glass/manuscript/01.md': '---\nid: ch1\ntitle: Chapter One\n---\ny\n',
     })
     await reconcile(fs, db, { now })
     expect(new ConnectionRepository(db).all()).toHaveLength(0)

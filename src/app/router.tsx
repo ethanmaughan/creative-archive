@@ -3,6 +3,8 @@ import { StudioPage } from '@/features/studio/StudioPage'
 import { DocumentView } from '@/features/studio/DocumentView'
 import { FilesPage } from '@/features/files/FilesPage'
 import { SourceView } from '@/features/files/SourceView'
+import { SpacesPage } from '@/features/spaces/SpacesPage'
+import { SpaceView } from '@/features/spaces/SpaceView'
 import { LibraryPage } from '@/features/library/LibraryPage'
 import { ConnectionsPage } from '@/features/connections/ConnectionsPage'
 import { QueryTrackerPage } from '@/features/query-tracker/QueryTrackerPage'
@@ -16,6 +18,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <StudioPage /> },
       { path: 'doc/*', element: <DocumentView /> },
+      { path: 'spaces', element: <SpacesPage /> },
+      { path: 'space/:slug', element: <SpaceView /> },
       { path: 'files', element: <FilesPage /> },
       { path: 'file/*', element: <SourceView /> },
       { path: 'library', element: <LibraryPage /> },

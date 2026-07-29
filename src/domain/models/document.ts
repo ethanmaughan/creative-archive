@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 export const DOCUMENT_KINDS = [
+  'space',
   'manuscript',
   'scene',
   'note',
@@ -58,8 +59,13 @@ export const libraryItemFrontmatterSchema = baseFrontmatterSchema.extend({
   logged: z.string().optional(),
 })
 
+export const spaceFrontmatterSchema = baseFrontmatterSchema.extend({
+  spaceType: z.enum(['writing', 'study', 'general']).optional(),
+})
+
 /** The schema to validate each document kind's frontmatter against. */
 export const frontmatterSchemas = {
+  space: spaceFrontmatterSchema,
   manuscript: baseFrontmatterSchema,
   scene: baseFrontmatterSchema,
   note: baseFrontmatterSchema,
