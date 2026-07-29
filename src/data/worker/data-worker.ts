@@ -15,11 +15,22 @@ import { openOpfs } from '@/data/storage/sqlite-index/client'
 import { applyMigrations, type Sqlite } from '@/data/storage/sqlite-index/migrator'
 import { MIGRATIONS } from '@/data/storage/sqlite-index/migrations'
 import { reconcile, reindexOne } from '@/data/storage/sqlite-index/reconciler'
+import { reconcileSources } from '@/data/ingest/reconcile-sources'
+import { extractText } from '@/data/ingest/extract-text'
 import { DocumentRepository, type DocumentRecord } from '@/data/repositories/document-repository'
+import { SourceRepository } from '@/data/repositories/source-repository'
 import { LibraryRepository } from '@/data/repositories/library-repository'
 import { ExtractionRepository } from '@/data/repositories/extraction-repository'
 import { ConnectionRepository } from '@/data/repositories/connection-repository'
-import { classifyKind } from '@/domain/models/workspace'
+import { classifyKind, isIndexablePath } from '@/domain/models/workspace'
+import {
+  basenameOf,
+  categoryForExt,
+  extForPath,
+  isSourceFilePath,
+  isTextExtractable,
+  type SourceCategory,
+} from '@/domain/models/source-file'
 import { validateConnection } from '@/domain/services/connection-rules'
 import { OllamaClient } from '@/data/ai/ollama-client'
 import { checkConsistency, suggestEdits, summarizeDocument } from '@/data/ai/ai-service'
@@ -42,11 +53,14 @@ import type {
   OpenResult,
   SaveDocumentPatch,
   SearchResultDTO,
+  SourceContentDTO,
+  TreeEntryDTO,
 } from './types'
 
 let db: Sqlite | null = null
 let store: FsaFileStore | null = null
 let documents: DocumentRepository | null = null
+let sources: SourceRepository | null = null
 let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
 let connections: ConnectionRepository | null = null
@@ -99,6 +113,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     db = await openOpfs()
     applyMigrations(db, MIGRATIONS)
     documents = new DocumentRepository(db)
+    sources = new SourceRepository(db)
     library = new LibraryRepository(db)
     extraction = new ExtractionRepository(db)
     connections = new ConnectionRepository(db)
@@ -112,12 +127,14 @@ const api: DataApi = {
     const ready = await ensureDb()
     store = new FsaFileStore(handle)
     const result = await reconcile(store, ready.db)
+    await reconcileSources(store, ready.db)
     return { docCount: ready.documents.all().length, ...result } satisfies OpenResult
   },
 
   async reconcile() {
     const open = requireOpen()
     const result = await reconcile(open.store, open.db)
+    await reconcileSources(open.store, open.db)
     return { docCount: documents?.all().length ?? 0, ...result } satisfies OpenResult
   },
 
@@ -126,29 +143,109 @@ const api: DataApi = {
   },
 
   async search(query: string, kind?: string) {
-    if (!documents || !store) return []
+    if (!store) return []
     const fts = toFtsQuery(query)
     if (fts === '') return []
-    const hits = documents.search(fts, { limit: 20, ...(kind !== undefined ? { kind } : {}) })
     const terms = queryTerms(query)
     const results: SearchResultDTO[] = []
-    for (const hit of hits) {
-      let snippet = ''
-      try {
-        const raw = await store.readTextFile(hit.relPath)
-        snippet = buildSnippet(parseFrontmatter(raw).body, terms)
-      } catch {
-        // File may have vanished between indexing and reading; show the hit without a snippet.
-      }
-      results.push({
-        id: hit.id,
-        relPath: hit.relPath,
-        title: hit.title,
-        kind: hit.kind,
-        snippet,
+
+    // `kind === 'source'` narrows to uploaded files; any other kind narrows to that document
+    // kind; omitting kind searches both documents and sources.
+    const wantDocuments = kind !== 'source'
+    const wantSources = kind === undefined || kind === 'source'
+
+    if (wantDocuments && documents) {
+      const docKind = kind !== undefined && kind !== 'source' ? kind : undefined
+      const hits = documents.search(fts, {
+        limit: 20,
+        ...(docKind !== undefined ? { kind: docKind } : {}),
       })
+      for (const hit of hits) {
+        let snippet = ''
+        try {
+          const raw = await store.readTextFile(hit.relPath)
+          snippet = buildSnippet(parseFrontmatter(raw).body, terms)
+        } catch {
+          // File may have vanished between indexing and reading; show the hit without a snippet.
+        }
+        results.push({
+          id: hit.id,
+          relPath: hit.relPath,
+          title: hit.title,
+          kind: hit.kind,
+          snippet,
+        })
+      }
+    }
+
+    if (wantSources && sources) {
+      for (const hit of sources.search(fts, 20)) {
+        let snippet = ''
+        try {
+          const { text } = await extractText(store, hit.relPath, hit.category as SourceCategory)
+          snippet = buildSnippet(text, terms)
+        } catch {
+          // Unreadable source — show the hit without a snippet.
+        }
+        results.push({
+          id: `source:${hit.relPath}`,
+          relPath: hit.relPath,
+          title: hit.title,
+          kind: 'source',
+          snippet,
+        })
+      }
     }
     return results
+  },
+
+  async listTree() {
+    if (!documents || !sources) return []
+    const entries: TreeEntryDTO[] = []
+    for (const d of documents.all()) {
+      entries.push({
+        relPath: d.relPath,
+        name: basenameOf(d.relPath),
+        nodeKind: 'document',
+        docKind: d.kind,
+      })
+    }
+    for (const s of sources.all()) {
+      entries.push({
+        relPath: s.relPath,
+        name: basenameOf(s.relPath),
+        nodeKind: 'source',
+        category: s.category,
+        ext: s.ext,
+        hasText: s.hasText,
+      })
+    }
+    return entries
+  },
+
+  async readSource(relPath): Promise<SourceContentDTO | null> {
+    if (!store) return null
+    const rel = normalizeRelPath(relPath)
+    if (!isSourceFilePath(rel)) return null
+    const stat = await store.stat(rel)
+    if (!stat) return null
+    const ext = extForPath(rel)
+    const category = categoryForExt(ext)
+    const { text, hasText } = isTextExtractable(category)
+      ? await extractText(store, rel, category)
+      : { text: '', hasText: false }
+    return { relPath: rel, name: basenameOf(rel), ext, category, size: stat.size, hasText, text }
+  },
+
+  async readSourceBytes(relPath) {
+    if (!store) return null
+    const rel = normalizeRelPath(relPath)
+    if (!isSourceFilePath(rel)) return null
+    try {
+      return await store.readBinaryFile(rel)
+    } catch {
+      return null
+    }
   },
 
   async readDocument(relPath) {
@@ -165,6 +262,10 @@ const api: DataApi = {
 
   async saveDocument(relPath, patch: SaveDocumentPatch) {
     const open = requireOpen()
+    // Sources are read-only by construction — never rewrite a file we didn't author.
+    if (!isIndexablePath(normalizeRelPath(relPath))) {
+      throw new Error('This is a read-only source file and cannot be edited here.')
+    }
     const raw = await open.store.readTextFile(relPath)
     const parsed = parseFrontmatter(raw)
     const data: Record<string, unknown> = { ...parsed.data }

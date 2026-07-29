@@ -30,6 +30,7 @@ export function createAiFileStore(base: FileStore): FileStore {
   return {
     list: () => base.list(),
     readTextFile: (relPath) => base.readTextFile(relPath),
+    readBinaryFile: (relPath) => base.readBinaryFile(relPath),
     stat: (relPath) => base.stat(relPath),
     writeTextFile: async (relPath, contents) => {
       assertWritable(relPath)
