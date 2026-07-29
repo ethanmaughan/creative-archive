@@ -3,6 +3,7 @@ import { type FileEntry, type FileStat, type FileStore, normalizeRelPath } from 
 
 interface MemoryFile {
   contents: string
+  bytes?: Uint8Array
   mtime: number
 }
 
@@ -28,8 +29,19 @@ export class MemoryFileStore implements FileStore {
     return file.contents
   }
 
+  async readBinaryFile(relPath: string): Promise<Uint8Array> {
+    const file = this.files.get(normalizeRelPath(relPath))
+    if (!file) throw new Error(`ENOENT: ${relPath}`)
+    return file.bytes ?? new TextEncoder().encode(file.contents)
+  }
+
   async writeTextFile(relPath: string, contents: string): Promise<void> {
     this.files.set(normalizeRelPath(relPath), { contents, mtime: this.clock++ })
+  }
+
+  /** Seed raw bytes (test helper) — for exercising binary extraction paths. */
+  setBytes(relPath: string, bytes: Uint8Array): void {
+    this.files.set(normalizeRelPath(relPath), { contents: '', bytes, mtime: this.clock++ })
   }
 
   async deleteFile(relPath: string): Promise<void> {
@@ -38,7 +50,8 @@ export class MemoryFileStore implements FileStore {
 
   async stat(relPath: string): Promise<FileStat | null> {
     const file = this.files.get(normalizeRelPath(relPath))
-    return file ? { mtime: file.mtime, size: file.contents.length } : null
+    if (!file) return null
+    return { mtime: file.mtime, size: file.bytes?.length ?? file.contents.length }
   }
 
   // --- test helpers (not part of FileStore) ---

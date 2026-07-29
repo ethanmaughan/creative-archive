@@ -36,6 +36,31 @@ export interface DocumentContent {
   readonly body: string
 }
 
+/** One entry in the archive file tree — an authored document or a read-only source file. */
+export interface TreeEntryDTO {
+  readonly relPath: string
+  readonly name: string
+  readonly nodeKind: 'document' | 'source'
+  /** Document kind, for `nodeKind: 'document'`. */
+  readonly docKind?: string
+  /** Source category (text | docx | pdf | image | other), for `nodeKind: 'source'`. */
+  readonly category?: string
+  readonly ext?: string
+  /** Whether searchable text was extracted (sources only). */
+  readonly hasText?: boolean
+}
+
+/** Read-only view of a foreign source file — extracted text plus metadata. */
+export interface SourceContentDTO {
+  readonly relPath: string
+  readonly name: string
+  readonly ext: string
+  readonly category: string
+  readonly size: number
+  readonly hasText: boolean
+  readonly text: string
+}
+
 /** Project-independent document kinds the user can create directly. */
 export type CreatableKind = 'character' | 'location' | 'note' | 'research'
 
@@ -154,7 +179,14 @@ export interface DataApi {
   /** Re-run the reconciler against the currently open archive. */
   reconcile(): Promise<OpenResult>
   listDocuments(): Promise<DocumentDTO[]>
-  /** Full-text search with body snippets, optionally filtered by document kind. */
+  /** Every indexed file (authored documents + read-only sources) for the file browser. */
+  listTree(): Promise<TreeEntryDTO[]>
+  /** Read a source file's extracted text + metadata, or null if it isn't a source. */
+  readSource(relPath: string): Promise<SourceContentDTO | null>
+  /** Raw bytes of a source file (for image preview), or null if missing. */
+  readSourceBytes(relPath: string): Promise<Uint8Array | null>
+  /** Full-text search with body snippets, optionally filtered by document kind. Pass the
+   *  sentinel kind `'source'` to search only uploaded files; omit to search everything. */
   search(query: string, kind?: string): Promise<SearchResultDTO[]>
   /** Read a document's content (frontmatter + body), or null if missing. */
   readDocument(relPath: string): Promise<DocumentContent | null>

@@ -32,7 +32,7 @@ export function SearchPage(): JSX.Element {
   return (
     <div className="content__inner">
       <h1 className="page-title">Search</h1>
-      <p className="page-sub">Full-text search across every indexed document.</p>
+      <p className="page-sub">Full-text search across your documents and uploaded files.</p>
 
       <div className="search-bar">
         <div className="search search--lg">
@@ -57,6 +57,7 @@ export function SearchPage(): JSX.Element {
               {kindLabel(k)}
             </option>
           ))}
+          <option value="source">Uploaded files</option>
         </select>
       </div>
 
@@ -66,10 +67,16 @@ export function SearchPage(): JSX.Element {
 
       <div className="result-list">
         {results.map((result) => (
-          <Link className="result" key={result.id} to={`/doc/${result.relPath}`}>
+          <Link
+            className="result"
+            key={result.id}
+            to={result.kind === 'source' ? `/file/${result.relPath}` : `/doc/${result.relPath}`}
+          >
             <div className="result__head">
               <span className="result__title">{result.title ?? result.relPath}</span>
-              <span className="chip">{kindLabel(result.kind)}</span>
+              <span className="chip">
+                {result.kind === 'source' ? 'Uploaded file' : kindLabel(result.kind)}
+              </span>
             </div>
             <div className="result__path">{result.relPath}</div>
             {result.snippet !== '' ? (

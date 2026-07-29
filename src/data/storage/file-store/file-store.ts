@@ -20,6 +20,8 @@ export interface FileStore {
   /** Recursively yield every entry under the archive root. */
   list(): AsyncIterable<FileEntry>
   readTextFile(relPath: string): Promise<string>
+  /** Read raw bytes — used to extract text from binary formats (docx/pdf) and preview images. */
+  readBinaryFile(relPath: string): Promise<Uint8Array>
   writeTextFile(relPath: string, contents: string): Promise<void>
   deleteFile(relPath: string): Promise<void>
   stat(relPath: string): Promise<FileStat | null>

@@ -23,7 +23,9 @@ import type {
   LibraryItemDTO,
   MarketDTO,
   SearchResultDTO,
+  SourceContentDTO,
   SubmissionDTO,
+  TreeEntryDTO,
 } from './types'
 
 export function useDocuments(): UseQueryResult<DocumentDTO[]> {
@@ -32,6 +34,23 @@ export function useDocuments(): UseQueryResult<DocumentDTO[]> {
     queryKey: ['documents'],
     queryFn: () => getDataClient().listDocuments(),
     enabled: ready,
+  })
+}
+
+export function useTree(): UseQueryResult<TreeEntryDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['tree'],
+    queryFn: () => getDataClient().listTree(),
+    enabled: ready,
+  })
+}
+
+export function useSource(relPath: string | null): UseQueryResult<SourceContentDTO | null> {
+  return useQuery({
+    queryKey: ['source', relPath],
+    queryFn: () => getDataClient().readSource(relPath as string),
+    enabled: relPath !== null && relPath.length > 0,
   })
 }
 
@@ -67,6 +86,7 @@ export function useSaveDocument(): UseMutationResult<DocumentContent, Error, Sav
     onSuccess: (doc) => {
       queryClient.setQueryData(['document', doc.relPath], doc)
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
+      void queryClient.invalidateQueries({ queryKey: ['tree'] })
     },
   })
 }
@@ -81,6 +101,7 @@ export function useCreateDocument(): UseMutationResult<
     mutationFn: (input: CreateDocumentInput) => getDataClient().createDocument(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
+      void queryClient.invalidateQueries({ queryKey: ['tree'] })
     },
   })
 }

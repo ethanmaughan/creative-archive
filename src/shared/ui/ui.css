@@ -896,3 +896,86 @@
   font-family: var(--font-mono);
   font-size: 0.9em;
 }
+
+/* ---------- file browser (tree) ---------- */
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.9rem;
+}
+.tree__children {
+  margin-left: 0.85rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.tree__dir-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.28rem 0.4rem;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+.tree__dir-head:hover {
+  background: var(--accent-wash);
+}
+.tree__file {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.4rem;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.tree__file:hover {
+  background: var(--accent-wash);
+}
+.tree__glyph {
+  flex: none;
+  width: 1.1em;
+  color: var(--faint);
+  font-size: 0.85em;
+}
+.tree__name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip--muted {
+  background: var(--line);
+  color: var(--faint);
+}
+
+/* ---------- read-only source viewer ---------- */
+.source-text {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--ink);
+  max-height: 70vh;
+  overflow: auto;
+}
+.source-image {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}

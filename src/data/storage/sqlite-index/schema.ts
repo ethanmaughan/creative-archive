@@ -60,6 +60,25 @@ export const documents = sqliteTable(
   ],
 )
 
+/** Derived index of read-only foreign "source" files (keyed by path; never mutated). The
+ *  `source_files_fts` companion is hand-authored in migration 0003. */
+export const sourceFiles = sqliteTable(
+  'source_files',
+  {
+    id: integer('id').primaryKey(),
+    relPath: text('rel_path').notNull().unique(),
+    ext: text('ext').notNull(),
+    category: text('category').notNull(),
+    title: text('title').notNull(),
+    size: integer('size').notNull().default(0),
+    fileMtime: integer('file_mtime').notNull().default(0),
+    contentHash: text('content_hash').notNull(),
+    hasText: integer('has_text').notNull().default(0),
+    indexedAt: text('indexed_at').notNull(),
+  },
+  (t) => [index('idx_source_files_category').on(t.category)],
+)
+
 /** Typed projection for library items (metadata; extraction lives in the file body). */
 export const libraryItems = sqliteTable('library_items', {
   documentId: text('document_id')
@@ -222,6 +241,7 @@ export const aiRuns = sqliteTable('ai_runs', {
 export const schema = {
   workspaces,
   documents,
+  sourceFiles,
   libraryItems,
   extractionFacets,
   connections,

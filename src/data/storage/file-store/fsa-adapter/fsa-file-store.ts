@@ -31,6 +31,12 @@ export class FsaFileStore implements FileStore {
     return file.text()
   }
 
+  async readBinaryFile(relPath: string): Promise<Uint8Array> {
+    const handle = await this.resolveFile(relPath, false)
+    const file = await handle.getFile()
+    return new Uint8Array(await file.arrayBuffer())
+  }
+
   async writeTextFile(relPath: string, contents: string): Promise<void> {
     const handle = await this.resolveFile(relPath, true)
     const writable = await handle.createWritable()

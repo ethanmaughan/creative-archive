@@ -1,6 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { StudioPage } from '@/features/studio/StudioPage'
 import { DocumentView } from '@/features/studio/DocumentView'
+import { FilesPage } from '@/features/files/FilesPage'
+import { SourceView } from '@/features/files/SourceView'
 import { LibraryPage } from '@/features/library/LibraryPage'
 import { ConnectionsPage } from '@/features/connections/ConnectionsPage'
 import { QueryTrackerPage } from '@/features/query-tracker/QueryTrackerPage'
@@ -14,6 +16,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <StudioPage /> },
       { path: 'doc/*', element: <DocumentView /> },
+      { path: 'files', element: <FilesPage /> },
+      { path: 'file/*', element: <SourceView /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'connections', element: <ConnectionsPage /> },
       { path: 'query-tracker', element: <QueryTrackerPage /> },
