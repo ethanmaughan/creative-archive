@@ -11,6 +11,7 @@ import { getDataClient } from './data-client'
 import type {
   AiRunResultDTO,
   AiStatus,
+  BacklinkDTO,
   ConnectionEdgeDTO,
   CreateConnectionInput,
   CreateDocumentInput,
@@ -132,6 +133,7 @@ export function useSaveDocument(): UseMutationResult<DocumentContent, Error, Sav
       queryClient.setQueryData(['document', doc.relPath], doc)
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
       void queryClient.invalidateQueries({ queryKey: ['tree'] })
+      void queryClient.invalidateQueries({ queryKey: ['backlinks'] })
     },
   })
 }
@@ -200,6 +202,15 @@ export function useDocumentConnections(
   return useQuery({
     queryKey: ['connections', 'doc', documentId],
     queryFn: () => getDataClient().listDocumentConnections(documentId as string),
+    enabled: ready && documentId !== null && documentId.length > 0,
+  })
+}
+
+export function useBacklinks(documentId: string | null): UseQueryResult<BacklinkDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['backlinks', documentId],
+    queryFn: () => getDataClient().listBacklinks(documentId as string),
     enabled: ready && documentId !== null && documentId.length > 0,
   })
 }
