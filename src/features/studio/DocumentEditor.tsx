@@ -4,6 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
 import { Wikilink } from './wikilink-extension'
 import { Hashtag } from './hashtag-extension'
+import { AnchorHighlight, anchorHighlightKey } from './anchor-highlight-extension'
 
 interface DocumentEditorProps {
   value: string
@@ -12,6 +13,10 @@ interface DocumentEditorProps {
   onWikilinkClick?: (target: string) => void
   /** Called when a `#tag` is clicked in the editor. */
   onTagClick?: (tag: string) => void
+  /** This document's resolvable name, for building `[[Title#^id]]` block references. */
+  docTitle?: string
+  /** A `^id`/heading anchor to scroll to and flash (from a `[[Doc#^id]]` click). */
+  anchor?: string | null
 }
 
 /** tiptap-markdown escapes `[` and `]` on serialize; restore the double-bracket wikilink syntax
@@ -20,7 +25,31 @@ function unescapeWikilinks(markdown: string): string {
   return markdown.replace(/\\\[\\\[/g, '[[').replace(/\\\]\\\]/g, ']]')
 }
 
-function Toolbar({ editor }: { editor: Editor | null }): JSX.Element | null {
+function genBlockId(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => (b % 36).toString(36)).join(
+    '',
+  )
+}
+
+/** Stamp the current block with an `^id` (reusing one if present) and copy `[[Title#^id]]`. */
+function copyBlockRef(editor: Editor, docTitle: string): void {
+  const { $from } = editor.state.selection
+  const existing = /\^([a-z0-9][a-z0-9-]*)\s*$/i.exec($from.parent.textContent)
+  let id = existing?.[1]?.toLowerCase()
+  if (id === undefined) {
+    id = genBlockId()
+    editor.chain().focus().insertContentAt($from.end(), ` ^${id}`).run()
+  }
+  void navigator.clipboard?.writeText(`[[${docTitle}#^${id}]]`).catch(() => undefined)
+}
+
+function Toolbar({
+  editor,
+  docTitle,
+}: {
+  editor: Editor | null
+  docTitle: string
+}): JSX.Element | null {
   // Re-render on editor transactions so active states stay in sync.
   const [, force] = useState(0)
   useEffect(() => {
@@ -91,6 +120,7 @@ function Toolbar({ editor }: { editor: Editor | null }): JSX.Element | null {
         () => chain().toggleCodeBlock().run(),
         'Code block',
       )}
+      {button('⚓', false, () => copyBlockRef(editor, docTitle), 'Copy block reference')}
     </div>
   )
 }
@@ -101,6 +131,8 @@ export function DocumentEditor({
   onChange,
   onWikilinkClick,
   onTagClick,
+  docTitle = '',
+  anchor = null,
 }: DocumentEditorProps): JSX.Element {
   const editor = useEditor({
     extensions: [
@@ -108,6 +140,7 @@ export function DocumentEditor({
       Markdown,
       Wikilink.configure({ onNavigate: (target: string) => onWikilinkClick?.(target) }),
       Hashtag.configure({ onNavigate: (tag: string) => onTagClick?.(tag) }),
+      AnchorHighlight,
     ],
     content: value,
     onUpdate: ({ editor: instance }) => {
@@ -115,9 +148,28 @@ export function DocumentEditor({
     },
   })
 
+  // Flash + scroll to the referenced block, then clear the highlight after a beat.
+  useEffect(() => {
+    if (!editor || anchor === null || anchor === '') return
+    editor.view.dispatch(editor.state.tr.setMeta(anchorHighlightKey, anchor))
+    const scroll = window.setTimeout(() => {
+      document
+        .querySelector('.is-anchor-flash')
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }, 60)
+    const clear = window.setTimeout(() => {
+      if (!editor.isDestroyed)
+        editor.view.dispatch(editor.state.tr.setMeta(anchorHighlightKey, null))
+    }, 2600)
+    return () => {
+      clearTimeout(scroll)
+      clearTimeout(clear)
+    }
+  }, [editor, anchor])
+
   return (
     <div className="editor">
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} docTitle={docTitle} />
       <EditorContent editor={editor} className="prose-editor" />
     </div>
   )

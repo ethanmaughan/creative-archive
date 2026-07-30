@@ -29,6 +29,7 @@ import { MEDIA_TYPES, type DocumentKind } from '@/domain/models/document'
 import { parseFacets } from '@/domain/services/parse-facets'
 import { parseWikilinks, wikilinkKey, type ParsedWikilink } from '@/domain/services/parse-wikilinks'
 import { normalizeTag, parseTags } from '@/domain/services/parse-tags'
+import { parseBlocks } from '@/domain/services/parse-blocks'
 import { hashText } from './content-hash'
 import type { Sqlite } from './migrator'
 
@@ -84,6 +85,17 @@ function syncTags(db: Sqlite, documentId: string, data: Frontmatter, body: strin
       documentId,
     ])
   }
+}
+
+/** Sync a document's referenceable anchors (block `^id`s + headings) into the blocks table. */
+function syncBlocks(db: Sqlite, documentId: string, body: string): void {
+  db.run('DELETE FROM blocks WHERE document_id = ?;', [documentId])
+  parseBlocks(body).forEach((block, index) => {
+    db.run(
+      'INSERT INTO blocks (document_id, anchor, type, text, position) VALUES (?, ?, ?, ?, ?);',
+      [documentId, block.anchor, block.type, block.text, index],
+    )
+  })
 }
 
 function titleFor(data: Frontmatter, relPath: string): string {
@@ -177,6 +189,7 @@ async function indexOneFile(
     syncLibraryProjection(db, kind, id, ensured.data)
     syncExtractionFacets(db, kind, id, parsed.body)
     syncTags(db, id, ensured.data, parsed.body)
+    syncBlocks(db, id, parsed.body)
     return { id, outcome: 'inserted', wikilinks }
   }
   if (existing.content_hash !== contentHash || existing.rel_path !== relPath) {
@@ -192,6 +205,7 @@ async function indexOneFile(
     syncLibraryProjection(db, kind, id, ensured.data)
     syncExtractionFacets(db, kind, id, parsed.body)
     syncTags(db, id, ensured.data, parsed.body)
+    syncBlocks(db, id, parsed.body)
     return { id, outcome: 'updated', wikilinks }
   }
   return { id, outcome: 'unchanged', wikilinks }
@@ -204,6 +218,7 @@ function removeDocument(db: Sqlite, id: string, rowid: number): void {
   // Drop the doc's own wikilinks; leave inbound links but mark them unresolved (broken).
   db.run('DELETE FROM links WHERE source_id = ?;', [id])
   db.run('UPDATE links SET target_id = NULL WHERE target_id = ?;', [id])
+  db.run('DELETE FROM blocks WHERE document_id = ?;', [id])
 }
 
 // --- wikilink graph (derived from bodies) ---
@@ -229,9 +244,11 @@ function insertLinks(
   now: () => string,
 ): void {
   for (const link of wikilinks) {
+    // An empty page with a fragment (`[[#^id]]`) points at a block in the current document.
+    const targetId = link.target === '' ? sourceId : resolve(link.target)
     db.run(
-      'INSERT INTO links (source_id, target_text, target_id, alias, created_at) VALUES (?, ?, ?, ?, ?);',
-      [sourceId, link.target, resolve(link.target), link.alias, now()],
+      'INSERT INTO links (source_id, target_text, target_id, target_block, alias, created_at) VALUES (?, ?, ?, ?, ?, ?);',
+      [sourceId, link.target, targetId, link.fragment, link.alias, now()],
     )
   }
 }

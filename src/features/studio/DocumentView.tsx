@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useDocument, useDocuments, useDocumentTags, useSaveDocument } from '@/data/worker/hooks'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
@@ -17,6 +17,8 @@ export function DocumentView(): JSX.Element {
   const { data: doc, isLoading } = useDocument(relPath)
   const { data: allDocs } = useDocuments()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const anchor = searchParams.get('anchor')
   const save = useSaveDocument()
   const saveMutate = save.mutate
 
@@ -31,10 +33,19 @@ export function DocumentView(): JSX.Element {
   resolverRef.current = resolver
   const onWikilinkClick = useCallback(
     (target: string) => {
-      const rel = resolverRef.current.get(target.trim().toLowerCase())
-      if (rel !== undefined) void navigate(`/doc/${rel}`)
+      const hash = target.indexOf('#')
+      const page = (hash < 0 ? target : target.slice(0, hash)).trim()
+      const fragment = hash < 0 ? '' : target.slice(hash + 1).trim()
+      const suffix = fragment !== '' ? `?anchor=${encodeURIComponent(fragment)}` : ''
+      // A fragment with no page (`[[#^id]]`) points within the current document.
+      if (page === '') {
+        if (fragment !== '') void navigate(`/doc/${relPath}${suffix}`)
+        return
+      }
+      const rel = resolverRef.current.get(page.toLowerCase())
+      if (rel !== undefined) void navigate(`/doc/${rel}${suffix}`)
     },
-    [navigate],
+    [navigate, relPath],
   )
   const onTagClick = useCallback(
     (tag: string) => void navigate(`/tags?tag=${encodeURIComponent(tag)}`),
@@ -111,6 +122,8 @@ export function DocumentView(): JSX.Element {
         }}
         onWikilinkClick={onWikilinkClick}
         onTagClick={onTagClick}
+        docTitle={doc.title ?? relPath}
+        anchor={anchor}
       />
 
       <div className="editor-actions">
