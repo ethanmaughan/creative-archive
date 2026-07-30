@@ -13,6 +13,7 @@ import type {
   AiStatus,
   BacklinkDTO,
   ConnectionEdgeDTO,
+  GraphDTO,
   CreateConnectionInput,
   CreateDocumentInput,
   CreateLibraryItemInput,
@@ -207,6 +208,15 @@ export function useDocumentConnections(
     queryKey: ['connections', 'doc', documentId],
     queryFn: () => getDataClient().listDocumentConnections(documentId as string),
     enabled: ready && documentId !== null && documentId.length > 0,
+  })
+}
+
+export function useGraph(): UseQueryResult<GraphDTO> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['graph'],
+    queryFn: () => getDataClient().getGraph(),
+    enabled: ready,
   })
 }
 

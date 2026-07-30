@@ -8,6 +8,7 @@ import { SpaceView } from '@/features/spaces/SpaceView'
 import { TagsPage } from '@/features/tags/TagsPage'
 import { LibraryPage } from '@/features/library/LibraryPage'
 import { ConnectionsPage } from '@/features/connections/ConnectionsPage'
+import { GraphPage } from '@/features/graph/GraphPage'
 import { QueryTrackerPage } from '@/features/query-tracker/QueryTrackerPage'
 import { SearchPage } from '@/features/search/SearchPage'
 import { Shell } from './Shell'
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
       { path: 'tags', element: <TagsPage /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'connections', element: <ConnectionsPage /> },
+      { path: 'graph', element: <GraphPage /> },
       { path: 'query-tracker', element: <QueryTrackerPage /> },
       { path: 'search', element: <SearchPage /> },
     ],
