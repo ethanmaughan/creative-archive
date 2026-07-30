@@ -7,6 +7,7 @@ import { Hashtag } from './hashtag-extension'
 import { AnchorHighlight, anchorHighlightKey } from './anchor-highlight-extension'
 import { Embed, type EmbedOptions } from './embed-extension'
 import { Query, type QueryOptions } from './query-extension'
+import { Autocomplete, type AutocompleteOptions } from './autocomplete-extension'
 import { kindLabel } from '@/shared/ui/kind-label'
 
 interface DocumentEditorProps {
@@ -26,6 +27,9 @@ interface DocumentEditorProps {
   onRunQuery?: QueryOptions['run']
   /** Navigate to a document path (from a query result). */
   onNavigateDoc?: (relPath: string) => void
+  /** Autocomplete sources for `[[` (documents) and `#` (tags). */
+  onQueryDocs?: AutocompleteOptions['queryDocs']
+  onQueryTags?: AutocompleteOptions['queryTags']
 }
 
 /** tiptap-markdown escapes `[`/`]` (and `!` before `[`) on serialize; restore the wikilink /
@@ -148,6 +152,8 @@ export function DocumentEditor({
   onResolveEmbed,
   onRunQuery,
   onNavigateDoc,
+  onQueryDocs,
+  onQueryTags,
 }: DocumentEditorProps): JSX.Element {
   const editor = useEditor({
     extensions: [
@@ -161,6 +167,10 @@ export function DocumentEditor({
         run: onRunQuery ?? (async () => []),
         onNavigate: (relPath: string) => onNavigateDoc?.(relPath),
         kindLabel,
+      }),
+      Autocomplete.configure({
+        queryDocs: onQueryDocs ?? (() => []),
+        queryTags: onQueryTags ?? (() => []),
       }),
     ],
     content: value,
