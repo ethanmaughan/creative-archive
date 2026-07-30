@@ -56,6 +56,47 @@ export class DocumentRepository {
       .map(toRecord)
   }
 
+  /** Declarative query used by inline ` ```query ` blocks. All filters AND together; values are
+   *  parameterized (never interpolated). Sorts by title. */
+  query(opts: {
+    kind?: string | null
+    tag?: string | null
+    pathPrefix?: string | null
+    sortDir?: 'asc' | 'desc'
+    limit?: number
+  }): DocumentRecord[] {
+    const cols = COLUMNS.split(', ')
+      .map((c) => `d.${c}`)
+      .join(', ')
+    const join = opts.tag
+      ? "JOIN taggings tg ON tg.entity_type = 'document' AND tg.entity_id = d.id"
+      : ''
+    const clauses: string[] = []
+    const params: SqlValue[] = []
+    if (opts.tag) {
+      clauses.push('tg.tag_id = ?')
+      params.push(opts.tag)
+    }
+    if (opts.kind) {
+      clauses.push('d.kind = ?')
+      params.push(opts.kind)
+    }
+    if (opts.pathPrefix) {
+      clauses.push('d.rel_path LIKE ?')
+      params.push(`${opts.pathPrefix}%`)
+    }
+    const where = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : ''
+    const dir = opts.sortDir === 'desc' ? 'DESC' : 'ASC'
+    params.push(opts.limit ?? 25)
+    return this.db
+      .selectRows<DocumentRow>(
+        `SELECT DISTINCT ${cols} FROM documents d ${join} ${where}
+          ORDER BY d.title ${dir} LIMIT ?;`,
+        params,
+      )
+      .map(toRecord)
+  }
+
   /** Full-text search over the FTS index, best matches first. Optionally filtered by kind and
    *  narrowed to a path prefix (used to scope search to one space). */
   search(
