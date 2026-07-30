@@ -243,7 +243,7 @@ export async function reconcile(
   const seen = new Set<string>()
 
   const ctx: IndexContext = { now, generateId }
-  for await (const entry of fileStore.list()) {
+  for (const entry of await fileStore.list()) {
     if (entry.kind !== 'file') continue
     const relPath = normalizeRelPath(entry.relPath)
     if (!isIndexablePath(relPath)) continue

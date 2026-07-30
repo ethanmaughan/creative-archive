@@ -1,4 +1,5 @@
 /** The typed contract between the UI (main thread) and the data worker. */
+import type { FileStore } from '@/data/storage/file-store/file-store'
 import type { MediaType } from '@/domain/models/document'
 import type { SpaceDocKind, SpaceType } from '@/domain/models/space'
 import type { MarketKind } from '@/domain/models/market'
@@ -212,6 +213,8 @@ export interface CreateSubmissionInput {
 export interface DataApi {
   /** Open an archive folder: opens/creates the OPFS index, runs migrations, reconciles. */
   openArchive(handle: FileSystemDirectoryHandle): Promise<OpenResult>
+  /** Desktop: open an archive from a Comlink-proxied native FileStore (Tauri fs). */
+  openArchiveNative(store: FileStore): Promise<OpenResult>
   /** Re-run the reconciler against the currently open archive. */
   reconcile(): Promise<OpenResult>
   listDocuments(): Promise<DocumentDTO[]>

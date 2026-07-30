@@ -17,10 +17,8 @@ export class MemoryFileStore implements FileStore {
     }
   }
 
-  async *list(): AsyncIterable<FileEntry> {
-    for (const relPath of this.files.keys()) {
-      yield { relPath, kind: 'file' }
-    }
+  async list(): Promise<FileEntry[]> {
+    return Array.from(this.files.keys(), (relPath) => ({ relPath, kind: 'file' as const }))
   }
 
   async readTextFile(relPath: string): Promise<string> {

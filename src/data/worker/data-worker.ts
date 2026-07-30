@@ -5,7 +5,7 @@
  */
 import * as Comlink from 'comlink'
 import { FsaFileStore } from '@/data/storage/file-store/fsa-adapter/fsa-file-store'
-import { normalizeRelPath } from '@/data/storage/file-store/file-store'
+import { type FileStore, normalizeRelPath } from '@/data/storage/file-store/file-store'
 import {
   ensureId,
   parseFrontmatter,
@@ -63,7 +63,7 @@ import type {
 } from './types'
 
 let db: Sqlite | null = null
-let store: FsaFileStore | null = null
+let store: FileStore | null = null
 let documents: DocumentRepository | null = null
 let sources: SourceRepository | null = null
 let spaces: SpaceRepository | null = null
@@ -109,7 +109,7 @@ function toContent(relPath: string, data: Record<string, unknown>, body: string)
   }
 }
 
-function requireOpen(): { db: Sqlite; store: FsaFileStore } {
+function requireOpen(): { db: Sqlite; store: FileStore } {
   if (!db || !store) throw new Error('No archive is open')
   return { db, store }
 }
@@ -133,6 +133,16 @@ const api: DataApi = {
   async openArchive(handle) {
     const ready = await ensureDb()
     store = new FsaFileStore(handle)
+    const result = await reconcile(store, ready.db)
+    await reconcileSources(store, ready.db)
+    return { docCount: ready.documents.all().length, ...result } satisfies OpenResult
+  },
+
+  // Desktop: the native FileStore lives on the main thread (Tauri APIs), handed in as a
+  // Comlink proxy. Everything downstream is identical — it's just a FileStore.
+  async openArchiveNative(nativeStore: FileStore) {
+    const ready = await ensureDb()
+    store = nativeStore
     const result = await reconcile(store, ready.db)
     await reconcileSources(store, ready.db)
     return { docCount: ready.documents.all().length, ...result } satisfies OpenResult
