@@ -125,7 +125,7 @@ export async function reconcileSources(
   let unchanged = 0
   const seen = new Set<string>()
 
-  for await (const entry of store.list()) {
+  for (const entry of await store.list()) {
     if (entry.kind !== 'file') continue
     const relPath = normalizeRelPath(entry.relPath)
     if (!isSourceFilePath(relPath)) continue

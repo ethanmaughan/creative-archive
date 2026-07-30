@@ -21,8 +21,10 @@ async function* walk(dir: FileSystemDirectoryHandle, prefix: string): AsyncItera
 export class FsaFileStore implements FileStore {
   constructor(private readonly root: FileSystemDirectoryHandle) {}
 
-  list(): AsyncIterable<FileEntry> {
-    return walk(this.root, '')
+  async list(): Promise<FileEntry[]> {
+    const entries: FileEntry[] = []
+    for await (const entry of walk(this.root, '')) entries.push(entry)
+    return entries
   }
 
   async readTextFile(relPath: string): Promise<string> {

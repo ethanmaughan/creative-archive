@@ -17,8 +17,9 @@ export interface FileStat {
 }
 
 export interface FileStore {
-  /** Recursively yield every entry under the archive root. */
-  list(): AsyncIterable<FileEntry>
+  /** Every entry under the archive root (recursive). Returns an array — not a stream — so a
+   *  FileStore can be proxied across the worker boundary (Comlink) for the desktop adapter. */
+  list(): Promise<readonly FileEntry[]>
   readTextFile(relPath: string): Promise<string>
   /** Read raw bytes — used to extract text from binary formats (docx/pdf) and preview images. */
   readBinaryFile(relPath: string): Promise<Uint8Array>
