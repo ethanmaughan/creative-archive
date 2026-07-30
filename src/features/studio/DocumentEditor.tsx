@@ -3,12 +3,15 @@ import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
 import { Wikilink } from './wikilink-extension'
+import { Hashtag } from './hashtag-extension'
 
 interface DocumentEditorProps {
   value: string
   onChange: (markdown: string) => void
   /** Called when a `[[wikilink]]` is clicked in the editor. */
   onWikilinkClick?: (target: string) => void
+  /** Called when a `#tag` is clicked in the editor. */
+  onTagClick?: (tag: string) => void
 }
 
 /** tiptap-markdown escapes `[` and `]` on serialize; restore the double-bracket wikilink syntax
@@ -97,12 +100,14 @@ export function DocumentEditor({
   value,
   onChange,
   onWikilinkClick,
+  onTagClick,
 }: DocumentEditorProps): JSX.Element {
   const editor = useEditor({
     extensions: [
       StarterKit,
       Markdown,
       Wikilink.configure({ onNavigate: (target: string) => onWikilinkClick?.(target) }),
+      Hashtag.configure({ onNavigate: (tag: string) => onTagClick?.(tag) }),
     ],
     content: value,
     onUpdate: ({ editor: instance }) => {

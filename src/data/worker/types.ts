@@ -164,6 +164,12 @@ export interface BacklinkDTO {
   readonly relPath: string
 }
 
+/** A tag with the number of documents carrying it. */
+export interface TagCountDTO {
+  readonly name: string
+  readonly count: number
+}
+
 export interface AiStatus {
   readonly available: boolean
 }
@@ -259,6 +265,12 @@ export interface DataApi {
   listDocumentConnections(documentId: string): Promise<ConnectionEdgeDTO[]>
   /** Documents that link to this one via a resolved `[[wikilink]]` (backlinks). */
   listBacklinks(documentId: string): Promise<BacklinkDTO[]>
+  /** All tags applied to documents, with counts. */
+  listTags(): Promise<TagCountDTO[]>
+  /** Documents carrying a given tag. */
+  listDocumentsByTag(name: string): Promise<DocumentDTO[]>
+  /** Tag names applied to a single document. */
+  listDocumentTags(documentId: string): Promise<string[]>
   /** Create a document↔document connection (rejects self-references). */
   createConnection(input: CreateConnectionInput): Promise<void>
   deleteConnection(id: string): Promise<void>

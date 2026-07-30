@@ -5,6 +5,7 @@ import { FilesPage } from '@/features/files/FilesPage'
 import { SourceView } from '@/features/files/SourceView'
 import { SpacesPage } from '@/features/spaces/SpacesPage'
 import { SpaceView } from '@/features/spaces/SpaceView'
+import { TagsPage } from '@/features/tags/TagsPage'
 import { LibraryPage } from '@/features/library/LibraryPage'
 import { ConnectionsPage } from '@/features/connections/ConnectionsPage'
 import { QueryTrackerPage } from '@/features/query-tracker/QueryTrackerPage'
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: 'space/:slug', element: <SpaceView /> },
       { path: 'files', element: <FilesPage /> },
       { path: 'file/*', element: <SourceView /> },
+      { path: 'tags', element: <TagsPage /> },
       { path: 'library', element: <LibraryPage /> },
       { path: 'connections', element: <ConnectionsPage /> },
       { path: 'query-tracker', element: <QueryTrackerPage /> },

@@ -28,6 +28,7 @@ import {
 import { MEDIA_TYPES, type DocumentKind } from '@/domain/models/document'
 import { parseFacets } from '@/domain/services/parse-facets'
 import { parseWikilinks, wikilinkKey, type ParsedWikilink } from '@/domain/services/parse-wikilinks'
+import { normalizeTag, parseTags } from '@/domain/services/parse-tags'
 import { hashText } from './content-hash'
 import type { Sqlite } from './migrator'
 
@@ -55,6 +56,34 @@ function extractTags(data: Frontmatter): string {
   if (Array.isArray(tags)) return tags.filter((t) => typeof t === 'string').join(' ')
   if (typeof tags === 'string') return tags
   return ''
+}
+
+/** Frontmatter tags as a normalized array. */
+function frontmatterTags(data: Frontmatter): string[] {
+  const tags = data['tags']
+  if (Array.isArray(tags)) return tags.filter((t): t is string => typeof t === 'string')
+  if (typeof tags === 'string') return tags.split(/[\s,]+/)
+  return []
+}
+
+/** Sync a document's tags (frontmatter tags ∪ inline `#tags`) into tags + taggings. */
+function syncTags(db: Sqlite, documentId: string, data: Frontmatter, body: string): void {
+  const names = new Set<string>()
+  for (const t of frontmatterTags(data)) {
+    const name = normalizeTag(t)
+    if (name !== '') names.add(name)
+  }
+  for (const name of parseTags(body)) names.add(name)
+
+  db.run('DELETE FROM taggings WHERE entity_type = ? AND entity_id = ?;', ['document', documentId])
+  for (const name of names) {
+    db.run('INSERT OR IGNORE INTO tags (id, name) VALUES (?, ?);', [name, name])
+    db.run('INSERT OR IGNORE INTO taggings (tag_id, entity_type, entity_id) VALUES (?, ?, ?);', [
+      name,
+      'document',
+      documentId,
+    ])
+  }
 }
 
 function titleFor(data: Frontmatter, relPath: string): string {
@@ -147,6 +176,7 @@ async function indexOneFile(
     writeFts(db, rowidFor(db, id), title, parsed.body, tags)
     syncLibraryProjection(db, kind, id, ensured.data)
     syncExtractionFacets(db, kind, id, parsed.body)
+    syncTags(db, id, ensured.data, parsed.body)
     return { id, outcome: 'inserted', wikilinks }
   }
   if (existing.content_hash !== contentHash || existing.rel_path !== relPath) {
@@ -161,6 +191,7 @@ async function indexOneFile(
     writeFts(db, existing.rowid, title, parsed.body, tags)
     syncLibraryProjection(db, kind, id, ensured.data)
     syncExtractionFacets(db, kind, id, parsed.body)
+    syncTags(db, id, ensured.data, parsed.body)
     return { id, outcome: 'updated', wikilinks }
   }
   return { id, outcome: 'unchanged', wikilinks }
