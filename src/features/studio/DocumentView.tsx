@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type JSX } from 'react'
-import { useParams } from 'react-router-dom'
-import { useDocument, useSaveDocument } from '@/data/worker/hooks'
+import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useDocument, useDocuments, useSaveDocument } from '@/data/worker/hooks'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { kindLabel } from '@/shared/ui/kind-label'
 import { ConnectionsPanel } from '@/features/connections/ConnectionsPanel'
+import { BacklinksPanel } from '@/features/links/BacklinksPanel'
 import { SummarizePanel } from '@/features/ai/SummarizePanel'
 import { DocumentEditor } from './DocumentEditor'
 
@@ -14,8 +15,27 @@ export function DocumentView(): JSX.Element {
   const params = useParams()
   const relPath = params['*'] ?? ''
   const { data: doc, isLoading } = useDocument(relPath)
+  const { data: allDocs } = useDocuments()
+  const navigate = useNavigate()
   const save = useSaveDocument()
   const saveMutate = save.mutate
+
+  // Resolve `[[wikilink]]` targets → a doc path (by title or filename), for click-to-navigate.
+  const resolverRef = useRef<Map<string, string>>(new Map())
+  const resolver = new Map<string, string>()
+  for (const d of allDocs ?? []) {
+    const base = d.relPath.split('/').pop()?.replace(/\.md$/i, '').toLowerCase()
+    if (base) resolver.set(base, d.relPath)
+    if (d.title) resolver.set(d.title.toLowerCase(), d.relPath)
+  }
+  resolverRef.current = resolver
+  const onWikilinkClick = useCallback(
+    (target: string) => {
+      const rel = resolverRef.current.get(target.trim().toLowerCase())
+      if (rel !== undefined) void navigate(`/doc/${rel}`)
+    },
+    [navigate],
+  )
 
   const [body, setBody] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -74,6 +94,7 @@ export function DocumentView(): JSX.Element {
           setBody(markdown)
           setDirty(true)
         }}
+        onWikilinkClick={onWikilinkClick}
       />
 
       <div className="editor-actions">
@@ -90,6 +111,7 @@ export function DocumentView(): JSX.Element {
         </Button>
       </div>
 
+      {doc.id !== '' ? <BacklinksPanel documentId={doc.id} /> : null}
       {doc.id !== '' ? <ConnectionsPanel documentId={doc.id} /> : null}
       <SummarizePanel relPath={relPath} />
     </div>

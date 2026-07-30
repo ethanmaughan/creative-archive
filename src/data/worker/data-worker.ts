@@ -23,6 +23,7 @@ import { SpaceRepository } from '@/data/repositories/space-repository'
 import { LibraryRepository } from '@/data/repositories/library-repository'
 import { ExtractionRepository } from '@/data/repositories/extraction-repository'
 import { ConnectionRepository } from '@/data/repositories/connection-repository'
+import { LinkRepository } from '@/data/repositories/link-repository'
 import { classifyKind, isIndexablePath } from '@/domain/models/workspace'
 import {
   basenameOf,
@@ -70,6 +71,7 @@ let spaces: SpaceRepository | null = null
 let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
 let connections: ConnectionRepository | null = null
+let links: LinkRepository | null = null
 let queryTracker: QueryTrackerRepository | null = null
 const aiClient: AiClient = new OllamaClient()
 
@@ -124,6 +126,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     library = new LibraryRepository(db)
     extraction = new ExtractionRepository(db)
     connections = new ConnectionRepository(db)
+    links = new LinkRepository(db)
     queryTracker = new QueryTrackerRepository(db)
   }
   return { db, documents: documents! }
@@ -398,6 +401,13 @@ const api: DataApi = {
 
   async listDocumentConnections(documentId: string) {
     return connections ? connections.forDocument(documentId) : []
+  },
+
+  async listBacklinks(documentId: string) {
+    if (!links) return []
+    return links
+      .backlinks(documentId)
+      .map((b) => ({ id: b.sourceId, title: b.title, relPath: b.relPath }))
   },
 
   async createConnection(input: CreateConnectionInput) {

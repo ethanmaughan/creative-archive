@@ -27,6 +27,7 @@ import {
 } from '@/domain/models/workspace'
 import { MEDIA_TYPES, type DocumentKind } from '@/domain/models/document'
 import { parseFacets } from '@/domain/services/parse-facets'
+import { parseWikilinks, wikilinkKey, type ParsedWikilink } from '@/domain/services/parse-wikilinks'
 import { hashText } from './content-hash'
 import type { Sqlite } from './migrator'
 
@@ -107,9 +108,14 @@ async function indexOneFile(
   db: Sqlite,
   relPath: string,
   ctx: IndexContext,
-): Promise<{ id: string; outcome: 'inserted' | 'updated' | 'unchanged' }> {
+): Promise<{
+  id: string
+  outcome: 'inserted' | 'updated' | 'unchanged'
+  wikilinks: ParsedWikilink[]
+}> {
   const raw = await fileStore.readTextFile(relPath)
   const parsed = parseFrontmatter(raw)
+  const wikilinks = parseWikilinks(parsed.body)
   const ensured = ensureId(parsed.data, ctx.generateId)
 
   let effectiveRaw = raw
@@ -141,7 +147,7 @@ async function indexOneFile(
     writeFts(db, rowidFor(db, id), title, parsed.body, tags)
     syncLibraryProjection(db, kind, id, ensured.data)
     syncExtractionFacets(db, kind, id, parsed.body)
-    return { id, outcome: 'inserted' }
+    return { id, outcome: 'inserted', wikilinks }
   }
   if (existing.content_hash !== contentHash || existing.rel_path !== relPath) {
     db.run(
@@ -155,15 +161,83 @@ async function indexOneFile(
     writeFts(db, existing.rowid, title, parsed.body, tags)
     syncLibraryProjection(db, kind, id, ensured.data)
     syncExtractionFacets(db, kind, id, parsed.body)
-    return { id, outcome: 'updated' }
+    return { id, outcome: 'updated', wikilinks }
   }
-  return { id, outcome: 'unchanged' }
+  return { id, outcome: 'unchanged', wikilinks }
 }
 
 function removeDocument(db: Sqlite, id: string, rowid: number): void {
   db.run('DELETE FROM documents_fts WHERE rowid = ?;', [rowid])
   db.run('DELETE FROM documents WHERE id = ?;', [id])
   pruneReferences(db, id)
+  // Drop the doc's own wikilinks; leave inbound links but mark them unresolved (broken).
+  db.run('DELETE FROM links WHERE source_id = ?;', [id])
+  db.run('UPDATE links SET target_id = NULL WHERE target_id = ?;', [id])
+}
+
+// --- wikilink graph (derived from bodies) ---
+
+/** Resolve a wikilink target to a document id by title or filename (case-insensitive). */
+function buildLinkResolver(db: Sqlite): (text: string) => string | null {
+  const rows = db.selectRows<{ id: string; title: string | null; rel_path: string }>(
+    'SELECT id, title, rel_path FROM documents;',
+  )
+  const byKey = new Map<string, string>()
+  for (const row of rows) {
+    byKey.set(wikilinkKey(basename(row.rel_path)), row.id)
+    if (row.title) byKey.set(wikilinkKey(row.title), row.id)
+  }
+  return (text) => byKey.get(wikilinkKey(text)) ?? null
+}
+
+function insertLinks(
+  db: Sqlite,
+  sourceId: string,
+  wikilinks: readonly ParsedWikilink[],
+  resolve: (text: string) => string | null,
+  now: () => string,
+): void {
+  for (const link of wikilinks) {
+    db.run(
+      'INSERT INTO links (source_id, target_text, target_id, alias, created_at) VALUES (?, ?, ?, ?, ?);',
+      [sourceId, link.target, resolve(link.target), link.alias, now()],
+    )
+  }
+}
+
+/** Full rebuild of the derived link graph from every document's parsed wikilinks. */
+function rebuildLinks(db: Sqlite, linkMap: Map<string, ParsedWikilink[]>, now: () => string): void {
+  db.exec('DELETE FROM links;')
+  const resolve = buildLinkResolver(db)
+  for (const [sourceId, wikilinks] of linkMap) insertLinks(db, sourceId, wikilinks, resolve, now)
+}
+
+/** Replace one document's outbound links (used by reindexOne after a single-file write). */
+function syncLinksForDoc(
+  db: Sqlite,
+  sourceId: string,
+  wikilinks: readonly ParsedWikilink[],
+  now: () => string,
+): void {
+  db.run('DELETE FROM links WHERE source_id = ?;', [sourceId])
+  insertLinks(db, sourceId, wikilinks, buildLinkResolver(db), now)
+}
+
+/** A (possibly newly created/renamed) document may satisfy previously-broken inbound links. */
+function resolveInboundLinks(db: Sqlite, id: string): void {
+  const doc = db.selectRows<{ title: string | null; rel_path: string }>(
+    'SELECT title, rel_path FROM documents WHERE id = ?;',
+    [id],
+  )[0]
+  if (!doc) return
+  const keys = new Set([wikilinkKey(basename(doc.rel_path))])
+  if (doc.title) keys.add(wikilinkKey(doc.title))
+  for (const key of keys) {
+    db.run(
+      'UPDATE links SET target_id = ? WHERE target_id IS NULL AND lower(trim(target_text)) = ?;',
+      [id, key],
+    )
+  }
 }
 
 /** Keep the typed `library_items` projection in sync with a document's frontmatter.
@@ -243,12 +317,14 @@ export async function reconcile(
   const seen = new Set<string>()
 
   const ctx: IndexContext = { now, generateId }
+  const linkMap = new Map<string, ParsedWikilink[]>()
   for (const entry of await fileStore.list()) {
     if (entry.kind !== 'file') continue
     const relPath = normalizeRelPath(entry.relPath)
     if (!isIndexablePath(relPath)) continue
-    const { id, outcome } = await indexOneFile(fileStore, db, relPath, ctx)
+    const { id, outcome, wikilinks } = await indexOneFile(fileStore, db, relPath, ctx)
     seen.add(id)
+    linkMap.set(id, wikilinks)
     if (outcome === 'inserted') inserted++
     else if (outcome === 'updated') updated++
     else unchanged++
@@ -271,6 +347,9 @@ export async function reconcile(
       deleted++
     }
   }
+
+  // Rebuild the derived wikilink graph now that every document is indexed (so targets resolve).
+  rebuildLinks(db, linkMap, now)
 
   return { inserted, updated, deleted, unchanged }
 }
@@ -312,6 +391,9 @@ export async function reindexOne(
     return 'skipped'
   }
 
-  const { outcome } = await indexOneFile(fileStore, db, rel, ctx)
+  const { id, outcome, wikilinks } = await indexOneFile(fileStore, db, rel, ctx)
+  // Refresh this doc's outbound links, and resolve any broken inbound links it now satisfies.
+  syncLinksForDoc(db, id, wikilinks, ctx.now)
+  resolveInboundLinks(db, id)
   return outcome
 }

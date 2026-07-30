@@ -2,10 +2,19 @@ import { useEffect, useState, type JSX } from 'react'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from 'tiptap-markdown'
+import { Wikilink } from './wikilink-extension'
 
 interface DocumentEditorProps {
   value: string
   onChange: (markdown: string) => void
+  /** Called when a `[[wikilink]]` is clicked in the editor. */
+  onWikilinkClick?: (target: string) => void
+}
+
+/** tiptap-markdown escapes `[` and `]` on serialize; restore the double-bracket wikilink syntax
+ *  so `[[Target]]` round-trips as literal Markdown (leaving genuinely escaped brackets alone). */
+function unescapeWikilinks(markdown: string): string {
+  return markdown.replace(/\\\[\\\[/g, '[[').replace(/\\\]\\\]/g, ']]')
 }
 
 function Toolbar({ editor }: { editor: Editor | null }): JSX.Element | null {
@@ -84,12 +93,20 @@ function Toolbar({ editor }: { editor: Editor | null }): JSX.Element | null {
 }
 
 /** Rich-text editor over a Markdown body, with a formatting toolbar. */
-export function DocumentEditor({ value, onChange }: DocumentEditorProps): JSX.Element {
+export function DocumentEditor({
+  value,
+  onChange,
+  onWikilinkClick,
+}: DocumentEditorProps): JSX.Element {
   const editor = useEditor({
-    extensions: [StarterKit, Markdown],
+    extensions: [
+      StarterKit,
+      Markdown,
+      Wikilink.configure({ onNavigate: (target: string) => onWikilinkClick?.(target) }),
+    ],
     content: value,
     onUpdate: ({ editor: instance }) => {
-      onChange(instance.storage.markdown.getMarkdown() as string)
+      onChange(unescapeWikilinks(instance.storage.markdown.getMarkdown() as string))
     },
   })
 

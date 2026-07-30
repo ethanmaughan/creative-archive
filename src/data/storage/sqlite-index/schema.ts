@@ -79,6 +79,25 @@ export const sourceFiles = sqliteTable(
   (t) => [index('idx_source_files_category').on(t.category)],
 )
 
+/** Derived wikilink graph parsed from document bodies (`[[Target]]`). Rebuilt by the reconciler;
+ *  `target_id` is null for unresolved (broken) links. Distinct from the canonical `connections`. */
+export const links = sqliteTable(
+  'links',
+  {
+    id: integer('id').primaryKey(),
+    sourceId: text('source_id').notNull(),
+    targetText: text('target_text').notNull(),
+    targetId: text('target_id'),
+    alias: text('alias'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    index('idx_links_source').on(t.sourceId),
+    index('idx_links_target').on(t.targetId),
+    index('idx_links_target_text').on(t.targetText),
+  ],
+)
+
 /** Typed projection for library items (metadata; extraction lives in the file body). */
 export const libraryItems = sqliteTable('library_items', {
   documentId: text('document_id')
@@ -244,6 +263,7 @@ export const schema = {
   workspaces,
   documents,
   sourceFiles,
+  links,
   libraryItems,
   extractionFacets,
   connections,

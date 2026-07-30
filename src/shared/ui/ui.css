@@ -1014,3 +1014,14 @@
   color: var(--muted);
   margin-bottom: 0.6rem;
 }
+
+/* ---------- wikilinks in the editor ---------- */
+.wikilink {
+  color: var(--accent);
+  cursor: pointer;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 2px;
+}
+.wikilink:hover {
+  background: var(--accent-wash);
+}

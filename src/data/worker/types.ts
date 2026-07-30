@@ -157,6 +157,13 @@ export interface CreateConnectionInput {
   readonly relationship?: string
 }
 
+/** A document that links to another via a resolved `[[wikilink]]` (a backlink). */
+export interface BacklinkDTO {
+  readonly id: string
+  readonly title: string | null
+  readonly relPath: string
+}
+
 export interface AiStatus {
   readonly available: boolean
 }
@@ -250,6 +257,8 @@ export interface DataApi {
   listConnections(): Promise<ConnectionEdgeDTO[]>
   /** Connection edges touching a specific document (as source or target). */
   listDocumentConnections(documentId: string): Promise<ConnectionEdgeDTO[]>
+  /** Documents that link to this one via a resolved `[[wikilink]]` (backlinks). */
+  listBacklinks(documentId: string): Promise<BacklinkDTO[]>
   /** Create a document↔document connection (rejects self-references). */
   createConnection(input: CreateConnectionInput): Promise<void>
   deleteConnection(id: string): Promise<void>
