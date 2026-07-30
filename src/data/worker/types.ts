@@ -170,6 +170,12 @@ export interface TagCountDTO {
   readonly count: number
 }
 
+/** Resolved content for an `![[embed]]` — a whole doc, a block, or a heading section. */
+export interface EmbedContentDTO {
+  readonly title: string
+  readonly text: string
+}
+
 export interface AiStatus {
   readonly available: boolean
 }
@@ -271,6 +277,8 @@ export interface DataApi {
   listDocumentsByTag(name: string): Promise<DocumentDTO[]>
   /** Tag names applied to a single document. */
   listDocumentTags(documentId: string): Promise<string[]>
+  /** Resolve an `![[embed]]` target to its content (whole doc / block / heading section). */
+  readEmbed(relPath: string, fragment: string | null): Promise<EmbedContentDTO | null>
   /** Create a document↔document connection (rejects self-references). */
   createConnection(input: CreateConnectionInput): Promise<void>
   deleteConnection(id: string): Promise<void>

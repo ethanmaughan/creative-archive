@@ -35,6 +35,7 @@ import {
   type SourceCategory,
 } from '@/domain/models/source-file'
 import { spaceMarkerPath, spacePathPrefix, subfolderForSpaceKind } from '@/domain/models/space'
+import { parseBlocks, extractHeadingSection } from '@/domain/services/parse-blocks'
 import { validateConnection } from '@/domain/services/connection-rules'
 import { OllamaClient } from '@/data/ai/ollama-client'
 import { checkConsistency, suggestEdits, summarizeDocument } from '@/data/ai/ai-service'
@@ -430,6 +431,28 @@ const api: DataApi = {
 
   async listDocumentTags(documentId: string) {
     return tags ? tags.forDocument(documentId) : []
+  },
+
+  async readEmbed(relPath: string, fragment: string | null) {
+    if (!store) return null
+    const rel = normalizeRelPath(relPath)
+    let raw: string
+    try {
+      raw = await store.readTextFile(rel)
+    } catch {
+      return null
+    }
+    const parsed = parseFrontmatter(raw)
+    const title = asString(parsed.data['title']) ?? basenameOf(rel).replace(/\.md$/i, '')
+    if (fragment === null || fragment === '') {
+      return { title, text: parsed.body.trim() }
+    }
+    if (fragment.startsWith('^')) {
+      const id = fragment.slice(1).toLowerCase()
+      const block = parseBlocks(parsed.body).find((b) => b.type === 'block' && b.anchor === id)
+      return { title, text: block?.text ?? '' }
+    }
+    return { title, text: extractHeadingSection(parsed.body, fragment) }
   },
 
   async createConnection(input: CreateConnectionInput) {

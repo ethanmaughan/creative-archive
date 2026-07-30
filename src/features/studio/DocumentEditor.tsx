@@ -5,6 +5,7 @@ import { Markdown } from 'tiptap-markdown'
 import { Wikilink } from './wikilink-extension'
 import { Hashtag } from './hashtag-extension'
 import { AnchorHighlight, anchorHighlightKey } from './anchor-highlight-extension'
+import { Embed, type EmbedOptions } from './embed-extension'
 
 interface DocumentEditorProps {
   value: string
@@ -17,12 +18,17 @@ interface DocumentEditorProps {
   docTitle?: string
   /** A `^id`/heading anchor to scroll to and flash (from a `[[Doc#^id]]` click). */
   anchor?: string | null
+  /** Resolve an `![[embed]]` target to its content, for inline rendering. */
+  onResolveEmbed?: EmbedOptions['resolve']
 }
 
-/** tiptap-markdown escapes `[` and `]` on serialize; restore the double-bracket wikilink syntax
- *  so `[[Target]]` round-trips as literal Markdown (leaving genuinely escaped brackets alone). */
+/** tiptap-markdown escapes `[`/`]` (and `!` before `[`) on serialize; restore the wikilink /
+ *  embed syntax so `[[Target]]` and `![[Target]]` round-trip as literal Markdown. */
 function unescapeWikilinks(markdown: string): string {
-  return markdown.replace(/\\\[\\\[/g, '[[').replace(/\\\]\\\]/g, ']]')
+  return markdown
+    .replace(/\\\[\\\[/g, '[[')
+    .replace(/\\\]\\\]/g, ']]')
+    .replace(/\\!\[\[/g, '![[')
 }
 
 function genBlockId(): string {
@@ -133,6 +139,7 @@ export function DocumentEditor({
   onTagClick,
   docTitle = '',
   anchor = null,
+  onResolveEmbed,
 }: DocumentEditorProps): JSX.Element {
   const editor = useEditor({
     extensions: [
@@ -141,6 +148,7 @@ export function DocumentEditor({
       Wikilink.configure({ onNavigate: (target: string) => onWikilinkClick?.(target) }),
       Hashtag.configure({ onNavigate: (tag: string) => onTagClick?.(tag) }),
       AnchorHighlight,
+      Embed.configure({ resolve: onResolveEmbed ?? (async () => null) }),
     ],
     content: value,
     onUpdate: ({ editor: instance }) => {

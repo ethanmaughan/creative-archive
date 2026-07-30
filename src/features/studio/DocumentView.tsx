@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useDocument, useDocuments, useDocumentTags, useSaveDocument } from '@/data/worker/hooks'
+import { getDataClient } from '@/data/worker/data-client'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { kindLabel } from '@/shared/ui/kind-label'
@@ -50,6 +51,14 @@ export function DocumentView(): JSX.Element {
   const onTagClick = useCallback(
     (tag: string) => void navigate(`/tags?tag=${encodeURIComponent(tag)}`),
     [navigate],
+  )
+  const resolveEmbed = useCallback(
+    async (target: string, fragment: string | null) => {
+      const rel = target === '' ? relPath : resolverRef.current.get(target.toLowerCase())
+      if (rel === undefined) return null
+      return getDataClient().readEmbed(rel, fragment)
+    },
+    [relPath],
   )
 
   const { data: docTags } = useDocumentTags(doc?.id ?? null)
@@ -124,6 +133,7 @@ export function DocumentView(): JSX.Element {
         onTagClick={onTagClick}
         docTitle={doc.title ?? relPath}
         anchor={anchor}
+        onResolveEmbed={resolveEmbed}
       />
 
       <div className="editor-actions">

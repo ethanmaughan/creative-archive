@@ -64,3 +64,28 @@ export function fragmentAnchor(fragment: string): { anchor: string; type: Anchor
   if (fragment.startsWith('^')) return { anchor: fragment.slice(1).toLowerCase(), type: 'block' }
   return { anchor: headingSlug(fragment), type: 'heading' }
 }
+
+/** A heading section: the heading line plus everything until the next same-or-higher heading.
+ *  Used to embed `![[Doc#Heading]]`. Returns '' if the heading isn't found. */
+export function extractHeadingSection(body: string, heading: string): string {
+  const slug = headingSlug(heading)
+  const lines = body.split('\n')
+  let start = -1
+  let level = 0
+  for (let i = 0; i < lines.length; i++) {
+    const match = /^(#{1,6})\s+(.*\S)\s*$/.exec(lines[i] ?? '')
+    if (match && headingSlug(match[2] ?? '') === slug) {
+      start = i
+      level = (match[1] ?? '').length
+      break
+    }
+  }
+  if (start < 0) return ''
+  const out = [lines[start] ?? '']
+  for (let i = start + 1; i < lines.length; i++) {
+    const match = /^(#{1,6})\s/.exec(lines[i] ?? '')
+    if (match && (match[1] ?? '').length <= level) break
+    out.push(lines[i] ?? '')
+  }
+  return out.join('\n').trim()
+}
