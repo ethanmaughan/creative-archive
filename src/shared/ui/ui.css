@@ -1179,3 +1179,67 @@
 .graph-canvas-wrap canvas {
   display: block;
 }
+
+/* ---------- help / syntax page ---------- */
+.help {
+  max-width: 720px;
+}
+.help__section {
+  margin-top: 1.8rem;
+}
+.help__h2 {
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.7rem;
+}
+.help__p {
+  color: var(--ink);
+  line-height: 1.65;
+  margin: 0 0 0.9rem;
+}
+.syntax {
+  display: grid;
+  grid-template-columns: minmax(9rem, 15rem) 1fr;
+  gap: 0.5rem 1rem;
+  align-items: start;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+.syntax__code {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent-ink);
+  background: var(--accent-wash);
+  padding: 0.2em 0.5em;
+  border-radius: 6px;
+  word-break: break-word;
+}
+.syntax__desc {
+  color: var(--ink);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+.help__pre {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--counter);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  overflow-x: auto;
+  margin: 0 0 0.8rem;
+}
+.help__keys {
+  margin-top: 0.4rem;
+}
+@media (max-width: 560px) {
+  .syntax {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+}

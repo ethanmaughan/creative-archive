@@ -1,5 +1,5 @@
 import { useEffect, type JSX } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ThemeToggle } from '@/shared/ui/ThemeToggle'
 import { OpenArchiveGate } from './OpenArchiveGate'
 import { useOpenArchive } from './use-open-archive'
@@ -15,6 +15,7 @@ const NAV: readonly { to: string; label: string; end: boolean }[] = [
   { to: '/graph', label: 'Graph', end: false },
   { to: '/query-tracker', label: 'Query Tracker', end: false },
   { to: '/search', label: 'Search', end: false },
+  { to: '/help', label: 'Help', end: false },
 ]
 
 function statusLabel(status: string, docCount: number): string {
@@ -29,6 +30,9 @@ export function Shell(): JSX.Element {
   const archiveName = useSession((s) => s.archiveName)
   const docCount = useSession((s) => s.docCount)
   const { restore } = useOpenArchive()
+  const location = useLocation()
+  // Help is static docs — readable before an archive is opened; everything else needs one.
+  const showContent = status === 'ready' || location.pathname === '/help'
 
   // On first load, reconnect to the remembered folder if permission is still granted.
   useEffect(() => {
@@ -69,7 +73,7 @@ export function Shell(): JSX.Element {
           <span className="topbar__spacer" />
           <ThemeToggle />
         </header>
-        <div className="content">{status === 'ready' ? <Outlet /> : <OpenArchiveGate />}</div>
+        <div className="content">{showContent ? <Outlet /> : <OpenArchiveGate />}</div>
       </div>
     </div>
   )

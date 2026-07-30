@@ -11,6 +11,7 @@ import { ConnectionsPage } from '@/features/connections/ConnectionsPage'
 import { GraphPage } from '@/features/graph/GraphPage'
 import { QueryTrackerPage } from '@/features/query-tracker/QueryTrackerPage'
 import { SearchPage } from '@/features/search/SearchPage'
+import { HelpPage } from '@/features/help/HelpPage'
 import { Shell } from './Shell'
 
 export const router = createBrowserRouter([
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       { path: 'graph', element: <GraphPage /> },
       { path: 'query-tracker', element: <QueryTrackerPage /> },
       { path: 'search', element: <SearchPage /> },
+      { path: 'help', element: <HelpPage /> },
     ],
   },
 ])
