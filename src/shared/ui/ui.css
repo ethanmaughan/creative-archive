@@ -1025,3 +1025,49 @@
 .wikilink:hover {
   background: var(--accent-wash);
 }
+
+/* ---------- tags ---------- */
+.hashtag {
+  color: var(--counter, var(--accent));
+  cursor: pointer;
+  font-weight: 500;
+}
+.hashtag:hover {
+  text-decoration: underline;
+}
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.doc-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 0.2em 0.6em;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.tag-chip:hover {
+  border-color: var(--line-strong);
+}
+.tag-chip.is-active {
+  background: var(--accent-wash);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.tag-chip__count {
+  font-size: 0.64rem;
+  color: var(--faint);
+}

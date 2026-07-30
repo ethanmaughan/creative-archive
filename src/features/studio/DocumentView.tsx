@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useDocument, useDocuments, useSaveDocument } from '@/data/worker/hooks'
+import { useDocument, useDocuments, useDocumentTags, useSaveDocument } from '@/data/worker/hooks'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { kindLabel } from '@/shared/ui/kind-label'
@@ -36,6 +36,12 @@ export function DocumentView(): JSX.Element {
     },
     [navigate],
   )
+  const onTagClick = useCallback(
+    (tag: string) => void navigate(`/tags?tag=${encodeURIComponent(tag)}`),
+    [navigate],
+  )
+
+  const { data: docTags } = useDocumentTags(doc?.id ?? null)
 
   const [body, setBody] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -85,6 +91,15 @@ export function DocumentView(): JSX.Element {
         <span className="chip">{kindLabel(doc.kind)}</span>
         <h1 className="page-title">{doc.title ?? relPath}</h1>
         <div className="doc-head__path">{relPath}</div>
+        {docTags && docTags.length > 0 ? (
+          <div className="doc-tags">
+            {docTags.map((tag) => (
+              <button key={tag} type="button" className="tag-chip" onClick={() => onTagClick(tag)}>
+                #{tag}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       <DocumentEditor
@@ -95,6 +110,7 @@ export function DocumentView(): JSX.Element {
           setDirty(true)
         }}
         onWikilinkClick={onWikilinkClick}
+        onTagClick={onTagClick}
       />
 
       <div className="editor-actions">

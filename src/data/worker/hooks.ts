@@ -30,6 +30,7 @@ import type {
   SourceContentDTO,
   SpaceDTO,
   SubmissionDTO,
+  TagCountDTO,
   TreeEntryDTO,
 } from './types'
 
@@ -134,6 +135,9 @@ export function useSaveDocument(): UseMutationResult<DocumentContent, Error, Sav
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
       void queryClient.invalidateQueries({ queryKey: ['tree'] })
       void queryClient.invalidateQueries({ queryKey: ['backlinks'] })
+      void queryClient.invalidateQueries({ queryKey: ['tags'] })
+      void queryClient.invalidateQueries({ queryKey: ['tag-docs'] })
+      void queryClient.invalidateQueries({ queryKey: ['document-tags'] })
     },
   })
 }
@@ -211,6 +215,33 @@ export function useBacklinks(documentId: string | null): UseQueryResult<Backlink
   return useQuery({
     queryKey: ['backlinks', documentId],
     queryFn: () => getDataClient().listBacklinks(documentId as string),
+    enabled: ready && documentId !== null && documentId.length > 0,
+  })
+}
+
+export function useTags(): UseQueryResult<TagCountDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['tags'],
+    queryFn: () => getDataClient().listTags(),
+    enabled: ready,
+  })
+}
+
+export function useDocumentsByTag(name: string | null): UseQueryResult<DocumentDTO[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['tag-docs', name],
+    queryFn: () => getDataClient().listDocumentsByTag(name as string),
+    enabled: ready && name !== null && name.length > 0,
+  })
+}
+
+export function useDocumentTags(documentId: string | null): UseQueryResult<string[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['document-tags', documentId],
+    queryFn: () => getDataClient().listDocumentTags(documentId as string),
     enabled: ready && documentId !== null && documentId.length > 0,
   })
 }

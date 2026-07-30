@@ -24,6 +24,7 @@ import { LibraryRepository } from '@/data/repositories/library-repository'
 import { ExtractionRepository } from '@/data/repositories/extraction-repository'
 import { ConnectionRepository } from '@/data/repositories/connection-repository'
 import { LinkRepository } from '@/data/repositories/link-repository'
+import { TagRepository } from '@/data/repositories/tag-repository'
 import { classifyKind, isIndexablePath } from '@/domain/models/workspace'
 import {
   basenameOf,
@@ -72,6 +73,7 @@ let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
 let connections: ConnectionRepository | null = null
 let links: LinkRepository | null = null
+let tags: TagRepository | null = null
 let queryTracker: QueryTrackerRepository | null = null
 const aiClient: AiClient = new OllamaClient()
 
@@ -127,6 +129,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     extraction = new ExtractionRepository(db)
     connections = new ConnectionRepository(db)
     links = new LinkRepository(db)
+    tags = new TagRepository(db)
     queryTracker = new QueryTrackerRepository(db)
   }
   return { db, documents: documents! }
@@ -408,6 +411,25 @@ const api: DataApi = {
     return links
       .backlinks(documentId)
       .map((b) => ({ id: b.sourceId, title: b.title, relPath: b.relPath }))
+  },
+
+  async listTags() {
+    return tags ? tags.all() : []
+  },
+
+  async listDocumentsByTag(name: string) {
+    if (!tags) return []
+    return tags.documentsForTag(name).map((d) => ({
+      id: d.id,
+      kind: d.kind,
+      relPath: d.relPath,
+      title: d.title,
+      workspaceId: null,
+    }))
+  },
+
+  async listDocumentTags(documentId: string) {
+    return tags ? tags.forDocument(documentId) : []
   },
 
   async createConnection(input: CreateConnectionInput) {
