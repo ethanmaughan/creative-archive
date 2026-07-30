@@ -24,6 +24,7 @@ import { LibraryRepository } from '@/data/repositories/library-repository'
 import { ExtractionRepository } from '@/data/repositories/extraction-repository'
 import { ConnectionRepository } from '@/data/repositories/connection-repository'
 import { LinkRepository } from '@/data/repositories/link-repository'
+import { GraphRepository } from '@/data/repositories/graph-repository'
 import { TagRepository } from '@/data/repositories/tag-repository'
 import { classifyKind, isIndexablePath } from '@/domain/models/workspace'
 import {
@@ -75,6 +76,7 @@ let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
 let connections: ConnectionRepository | null = null
 let links: LinkRepository | null = null
+let graph: GraphRepository | null = null
 let tags: TagRepository | null = null
 let queryTracker: QueryTrackerRepository | null = null
 const aiClient: AiClient = new OllamaClient()
@@ -131,6 +133,7 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     extraction = new ExtractionRepository(db)
     connections = new ConnectionRepository(db)
     links = new LinkRepository(db)
+    graph = new GraphRepository(db)
     tags = new TagRepository(db)
     queryTracker = new QueryTrackerRepository(db)
   }
@@ -459,6 +462,10 @@ const api: DataApi = {
   async runQuery(queryText: string) {
     if (!documents) return []
     return documents.query(parseQuery(queryText)).map(toDto)
+  },
+
+  async getGraph() {
+    return graph ? graph.graph() : { nodes: [], edges: [] }
   },
 
   async createConnection(input: CreateConnectionInput) {

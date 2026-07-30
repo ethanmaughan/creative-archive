@@ -1159,3 +1159,23 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ---------- graph view ---------- */
+.graph-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.graph-canvas-wrap {
+  flex: 1 1 auto;
+  min-height: 420px;
+  margin-top: 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  touch-action: none;
+}
+.graph-canvas-wrap canvas {
+  display: block;
+}

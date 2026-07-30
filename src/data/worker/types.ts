@@ -176,6 +176,12 @@ export interface EmbedContentDTO {
   readonly text: string
 }
 
+/** The knowledge graph for the graph view. */
+export interface GraphDTO {
+  readonly nodes: { id: string; relPath: string; title: string | null; kind: string }[]
+  readonly edges: { source: string; target: string }[]
+}
+
 export interface AiStatus {
   readonly available: boolean
 }
@@ -281,6 +287,8 @@ export interface DataApi {
   readEmbed(relPath: string, fragment: string | null): Promise<EmbedContentDTO | null>
   /** Run an inline ` ```query ` block's declarative query, returning matching documents. */
   runQuery(queryText: string): Promise<DocumentDTO[]>
+  /** The document graph (nodes + deduped wikilink/connection edges) for the graph view. */
+  getGraph(): Promise<GraphDTO>
   /** Create a document↔document connection (rejects self-references). */
   createConnection(input: CreateConnectionInput): Promise<void>
   deleteConnection(id: string): Promise<void>
