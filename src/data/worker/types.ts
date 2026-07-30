@@ -279,6 +279,8 @@ export interface DataApi {
   listDocumentTags(documentId: string): Promise<string[]>
   /** Resolve an `![[embed]]` target to its content (whole doc / block / heading section). */
   readEmbed(relPath: string, fragment: string | null): Promise<EmbedContentDTO | null>
+  /** Run an inline ` ```query ` block's declarative query, returning matching documents. */
+  runQuery(queryText: string): Promise<DocumentDTO[]>
   /** Create a document↔document connection (rejects self-references). */
   createConnection(input: CreateConnectionInput): Promise<void>
   deleteConnection(id: string): Promise<void>

@@ -36,6 +36,7 @@ import {
 } from '@/domain/models/source-file'
 import { spaceMarkerPath, spacePathPrefix, subfolderForSpaceKind } from '@/domain/models/space'
 import { parseBlocks, extractHeadingSection } from '@/domain/services/parse-blocks'
+import { parseQuery } from '@/domain/services/parse-query'
 import { validateConnection } from '@/domain/services/connection-rules'
 import { OllamaClient } from '@/data/ai/ollama-client'
 import { checkConsistency, suggestEdits, summarizeDocument } from '@/data/ai/ai-service'
@@ -453,6 +454,11 @@ const api: DataApi = {
       return { title, text: block?.text ?? '' }
     }
     return { title, text: extractHeadingSection(parsed.body, fragment) }
+  },
+
+  async runQuery(queryText: string) {
+    if (!documents) return []
+    return documents.query(parseQuery(queryText)).map(toDto)
   },
 
   async createConnection(input: CreateConnectionInput) {

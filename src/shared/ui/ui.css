@@ -1116,3 +1116,46 @@
   max-height: 40vh;
   overflow: auto;
 }
+
+/* ---------- inline query blocks ---------- */
+.query-card {
+  margin: 0.5rem 0 1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--counter);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  user-select: none;
+}
+.query-card__head {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  padding: 0.35rem 0.7rem;
+  border-bottom: 1px solid var(--line);
+}
+.query-card__body {
+  display: flex;
+  flex-direction: column;
+  padding: 0.3rem;
+}
+.query-result {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+.query-result:hover {
+  background: var(--accent-wash);
+}
+.query-result__title {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

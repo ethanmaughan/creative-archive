@@ -6,6 +6,8 @@ import { Wikilink } from './wikilink-extension'
 import { Hashtag } from './hashtag-extension'
 import { AnchorHighlight, anchorHighlightKey } from './anchor-highlight-extension'
 import { Embed, type EmbedOptions } from './embed-extension'
+import { Query, type QueryOptions } from './query-extension'
+import { kindLabel } from '@/shared/ui/kind-label'
 
 interface DocumentEditorProps {
   value: string
@@ -20,6 +22,10 @@ interface DocumentEditorProps {
   anchor?: string | null
   /** Resolve an `![[embed]]` target to its content, for inline rendering. */
   onResolveEmbed?: EmbedOptions['resolve']
+  /** Run an inline ` ```query ` block's query. */
+  onRunQuery?: QueryOptions['run']
+  /** Navigate to a document path (from a query result). */
+  onNavigateDoc?: (relPath: string) => void
 }
 
 /** tiptap-markdown escapes `[`/`]` (and `!` before `[`) on serialize; restore the wikilink /
@@ -140,6 +146,8 @@ export function DocumentEditor({
   docTitle = '',
   anchor = null,
   onResolveEmbed,
+  onRunQuery,
+  onNavigateDoc,
 }: DocumentEditorProps): JSX.Element {
   const editor = useEditor({
     extensions: [
@@ -149,6 +157,11 @@ export function DocumentEditor({
       Hashtag.configure({ onNavigate: (tag: string) => onTagClick?.(tag) }),
       AnchorHighlight,
       Embed.configure({ resolve: onResolveEmbed ?? (async () => null) }),
+      Query.configure({
+        run: onRunQuery ?? (async () => []),
+        onNavigate: (relPath: string) => onNavigateDoc?.(relPath),
+        kindLabel,
+      }),
     ],
     content: value,
     onUpdate: ({ editor: instance }) => {

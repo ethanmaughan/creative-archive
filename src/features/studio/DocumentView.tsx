@@ -60,6 +60,8 @@ export function DocumentView(): JSX.Element {
     },
     [relPath],
   )
+  const runQuery = useCallback((text: string) => getDataClient().runQuery(text), [])
+  const navigateDoc = useCallback((rel: string) => void navigate(`/doc/${rel}`), [navigate])
 
   const { data: docTags } = useDocumentTags(doc?.id ?? null)
 
@@ -134,6 +136,8 @@ export function DocumentView(): JSX.Element {
         docTitle={doc.title ?? relPath}
         anchor={anchor}
         onResolveEmbed={resolveEmbed}
+        onRunQuery={runQuery}
+        onNavigateDoc={navigateDoc}
       />
 
       <div className="editor-actions">
