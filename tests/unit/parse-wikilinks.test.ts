@@ -6,18 +6,23 @@ describe('parseWikilinks', () => {
   it('extracts targets and aliases', () => {
     const links = parseWikilinks('See [[Mara]] and [[The City|home]].')
     expect(links).toEqual([
-      { target: 'Mara', alias: null },
-      { target: 'The City', alias: 'home' },
+      { target: 'Mara', fragment: null, alias: null },
+      { target: 'The City', fragment: null, alias: 'home' },
     ])
   })
 
-  it('trims, ignores empties, and dedupes by target (case-insensitive)', () => {
-    const links = parseWikilinks('[[  Mara  ]] [[mara]] [[]] [[MARA|nick]]')
-    expect(links).toEqual([{ target: 'Mara', alias: null }])
+  it('captures a #fragment (block or heading) and a same-doc [[#^id]]', () => {
+    expect(parseWikilinks('ref [[Mara#^a1b2]] and [[Notes#Backstory]] and [[#^self]]')).toEqual([
+      { target: 'Mara', fragment: '^a1b2', alias: null },
+      { target: 'Notes', fragment: 'Backstory', alias: null },
+      { target: '', fragment: '^self', alias: null },
+    ])
   })
 
-  it('returns nothing when there are no wikilinks', () => {
-    expect(parseWikilinks('plain text, [not a link], (also not)')).toEqual([])
+  it('trims, ignores empties, and dedupes by page+fragment', () => {
+    expect(parseWikilinks('[[  Mara  ]] [[mara]] [[]] [[MARA|nick]]')).toEqual([
+      { target: 'Mara', fragment: null, alias: null },
+    ])
   })
 
   it('normalizes keys for matching', () => {

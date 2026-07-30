@@ -1071,3 +1071,11 @@
   font-size: 0.64rem;
   color: var(--faint);
 }
+
+/* ---------- block-reference anchor flash ---------- */
+.ProseMirror .is-anchor-flash {
+  background: var(--accent-wash);
+  box-shadow: 0 0 0 4px var(--accent-wash);
+  border-radius: 3px;
+  transition: background 0.4s ease;
+}

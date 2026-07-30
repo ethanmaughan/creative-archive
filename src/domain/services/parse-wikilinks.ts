@@ -8,8 +8,10 @@
  */
 
 export interface ParsedWikilink {
-  /** The target as written, trimmed (e.g. "My Character"). */
+  /** The page part of the target, trimmed (e.g. "My Character"); empty for a same-doc `[[#^id]]`. */
   readonly target: string
+  /** A `#fragment` — `^id` (block) or heading text — or null. */
+  readonly fragment: string | null
   /** Optional display alias from `[[Target|alias]]`. */
   readonly alias: string | null
 }
@@ -20,13 +22,16 @@ export function parseWikilinks(body: string): ParsedWikilink[] {
   const seen = new Set<string>()
   const links: ParsedWikilink[] = []
   for (const match of body.matchAll(WIKILINK)) {
-    const target = (match[1] ?? '').trim()
-    if (target === '') continue
-    const key = target.toLowerCase()
+    const raw = (match[1] ?? '').trim()
+    const hash = raw.indexOf('#')
+    const target = (hash < 0 ? raw : raw.slice(0, hash)).trim()
+    const fragment = hash < 0 ? null : raw.slice(hash + 1).trim() || null
+    if (target === '' && fragment === null) continue // `[[]]`
+    const key = `${target.toLowerCase()}#${fragment ?? ''}`
     if (seen.has(key)) continue
     seen.add(key)
     const rawAlias = match[2]?.trim()
-    links.push({ target, alias: rawAlias && rawAlias !== '' ? rawAlias : null })
+    links.push({ target, fragment, alias: rawAlias && rawAlias !== '' ? rawAlias : null })
   }
   return links
 }

@@ -88,6 +88,7 @@ export const links = sqliteTable(
     sourceId: text('source_id').notNull(),
     targetText: text('target_text').notNull(),
     targetId: text('target_id'),
+    targetBlock: text('target_block'),
     alias: text('alias'),
     createdAt: text('created_at').notNull(),
   },
@@ -95,6 +96,23 @@ export const links = sqliteTable(
     index('idx_links_source').on(t.sourceId),
     index('idx_links_target').on(t.targetId),
     index('idx_links_target_text').on(t.targetText),
+  ],
+)
+
+/** Referenceable anchors within documents: trailing `^id` block markers and headings (0007). */
+export const blocks = sqliteTable(
+  'blocks',
+  {
+    id: integer('id').primaryKey(),
+    documentId: text('document_id').notNull(),
+    anchor: text('anchor').notNull(),
+    type: text('type').notNull(),
+    text: text('text').notNull(),
+    position: integer('position').notNull().default(0),
+  },
+  (t) => [
+    index('idx_blocks_document').on(t.documentId),
+    index('idx_blocks_anchor').on(t.documentId, t.anchor),
   ],
 )
 
@@ -264,6 +282,7 @@ export const schema = {
   documents,
   sourceFiles,
   links,
+  blocks,
   libraryItems,
   extractionFacets,
   connections,
