@@ -1079,3 +1079,40 @@
   border-radius: 3px;
   transition: background 0.4s ease;
 }
+
+/* ---------- inline embeds (transclusion) ---------- */
+.embed-card {
+  margin: 0.5rem 0 1rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  user-select: none;
+}
+.embed-card--broken {
+  border-left-color: var(--counter);
+}
+.embed-card__head {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  padding: 0.35rem 0.7rem;
+  background: var(--accent-wash);
+  border-bottom: 1px solid var(--line);
+}
+.embed-card--broken .embed-card__head {
+  background: transparent;
+  color: var(--counter);
+}
+.embed-card__body {
+  padding: 0.6rem 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink);
+  max-height: 40vh;
+  overflow: auto;
+}

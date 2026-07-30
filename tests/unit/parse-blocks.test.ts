@@ -1,6 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect } from 'vitest'
-import { parseBlocks, splitFragment, fragmentAnchor } from '@/domain/services/parse-blocks'
+import {
+  parseBlocks,
+  splitFragment,
+  fragmentAnchor,
+  extractHeadingSection,
+} from '@/domain/services/parse-blocks'
 
 describe('parseBlocks', () => {
   it('extracts trailing ^id block markers and headings', () => {
@@ -21,5 +26,12 @@ describe('parseBlocks', () => {
   it('resolves a fragment to a block or heading anchor', () => {
     expect(fragmentAnchor('^A1B2')).toEqual({ anchor: 'a1b2', type: 'block' })
     expect(fragmentAnchor('Backstory')).toEqual({ anchor: 'backstory', type: 'heading' })
+  })
+
+  it('extracts a heading section up to the next same-or-higher heading', () => {
+    const body = '## Backstory\nthe past\nmore\n\n## Present\nnow'
+    expect(extractHeadingSection(body, 'Backstory')).toBe('## Backstory\nthe past\nmore')
+    expect(extractHeadingSection(body, 'Present')).toBe('## Present\nnow')
+    expect(extractHeadingSection(body, 'Missing')).toBe('')
   })
 })
