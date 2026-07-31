@@ -393,10 +393,10 @@ const api: DataApi = {
     }
     // The app stamps when the entry was logged (date + time); the user never types this.
     data['logged'] = new Date().toISOString()
-    const content = serializeFrontmatter(data, '')
-    await open.store.writeTextFile(relPath, content)
+    const body = input.body ?? ''
+    await open.store.writeTextFile(relPath, serializeFrontmatter(data, body))
     await reindexOne(open.store, open.db, relPath)
-    return toContent(relPath, data, '')
+    return toContent(relPath, data, body)
   },
 
   async listFacets(facet?: string) {

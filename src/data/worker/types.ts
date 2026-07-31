@@ -128,6 +128,8 @@ export interface CreateLibraryItemInput {
   readonly rating?: number
   /** Date the media was consumed (YYYY-MM-DD). */
   readonly consumedOn?: string
+  /** The written entry (notes/review) — becomes the document body. */
+  readonly body?: string
 }
 
 /** A single creative-extraction facet entry, joined to its source document. */

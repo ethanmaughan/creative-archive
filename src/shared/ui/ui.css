@@ -354,7 +354,45 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
   margin-bottom: 1.4rem;
+}
+
+/* ---------- library "log" form (with an inline entry) ---------- */
+.newlib {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(560px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.7rem;
+}
+.newlib__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.newlib__notes {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg, var(--surface));
+  color: var(--ink);
+}
+.newlib__notes:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.newlib__actions {
+  display: flex;
+  gap: 0.5rem;
 }
 .newdoc {
   display: flex;
