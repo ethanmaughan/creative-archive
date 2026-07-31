@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import {
-  useDocument,
-  useDocuments,
-  useDocumentTags,
-  useSaveDocument,
-  useTags,
-} from '@/data/worker/hooks'
+import { useDocument, useDocuments, useDocumentTags, useSaveDocument } from '@/data/worker/hooks'
 import { getDataClient } from '@/data/worker/data-client'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
@@ -15,6 +9,7 @@ import { ConnectionsPanel } from '@/features/connections/ConnectionsPanel'
 import { BacklinksPanel } from '@/features/links/BacklinksPanel'
 import { SummarizePanel } from '@/features/ai/SummarizePanel'
 import { DocumentEditor } from './DocumentEditor'
+import { useAutocompleteSources } from './use-autocomplete-sources'
 
 const AUTOSAVE_DELAY_MS = 1200
 
@@ -70,25 +65,7 @@ export function DocumentView(): JSX.Element {
   const navigateDoc = useCallback((rel: string) => void navigate(`/doc/${rel}`), [navigate])
 
   // Autocomplete sources: `[[` over document titles, `#` over existing tags.
-  const { data: allTags } = useTags()
-  const docsRef = useRef(allDocs)
-  docsRef.current = allDocs
-  const tagsRef = useRef(allTags)
-  tagsRef.current = allTags
-  const queryDocs = useCallback((query: string) => {
-    const q = query.trim().toLowerCase()
-    return (docsRef.current ?? [])
-      .filter((d): d is typeof d & { title: string } => Boolean(d.title?.toLowerCase().includes(q)))
-      .slice(0, 8)
-      .map((d) => ({ label: d.title, insertText: `[[${d.title}]]` }))
-  }, [])
-  const queryTags = useCallback((query: string) => {
-    const q = query.trim().toLowerCase()
-    return (tagsRef.current ?? [])
-      .filter((t) => t.name.includes(q))
-      .slice(0, 8)
-      .map((t) => ({ label: `#${t.name}`, insertText: `#${t.name} ` }))
-  }, [])
+  const { queryDocs, queryTags } = useAutocompleteSources()
 
   const { data: docTags } = useDocumentTags(doc?.id ?? null)
 
