@@ -107,3 +107,7 @@ hook once per clone (it applies to all worktrees):
 ```sh
 git config core.hooksPath .githooks
 ```
+
+## License
+
+[MIT](LICENSE) © Ethan Maughan. Free to use, modify, and share.
