@@ -1,5 +1,4 @@
 import { useState, type JSX } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useCreateLibraryItem } from '@/data/worker/hooks'
 import { Button } from '@/shared/ui/Button'
 import { MEDIA_TYPES, type MediaType } from '@/domain/models/document'
@@ -13,8 +12,8 @@ export function NewLibraryItemButton(): JSX.Element {
   const [year, setYear] = useState('')
   const [rating, setRating] = useState('')
   const [consumedOn, setConsumedOn] = useState('')
+  const [body, setBody] = useState('')
   const create = useCreateLibraryItem()
-  const navigate = useNavigate()
 
   const submit = (): void => {
     const trimmedTitle = title.trim()
@@ -29,16 +28,19 @@ export function NewLibraryItemButton(): JSX.Element {
         ...(yearNum !== undefined && !Number.isNaN(yearNum) ? { year: yearNum } : {}),
         ...(ratingNum !== undefined && !Number.isNaN(ratingNum) ? { rating: ratingNum } : {}),
         ...(consumedOn !== '' ? { consumedOn } : {}),
+        ...(body.trim() !== '' ? { body: body.trim() } : {}),
       },
       {
-        onSuccess: (doc) => {
+        // Stay on the Library — the new entry appears in the list right away. Click it any time
+        // to open the full editor for longer writing, links, and embeds.
+        onSuccess: () => {
           setOpen(false)
           setTitle('')
           setCreator('')
           setYear('')
           setRating('')
           setConsumedOn('')
-          void navigate(`/doc/${doc.relPath}`)
+          setBody('')
         },
       },
     )
@@ -53,72 +55,83 @@ export function NewLibraryItemButton(): JSX.Element {
   }
 
   return (
-    <div className="newdoc newdoc--lib">
-      <select
-        className="newdoc__select"
-        value={mediaType}
-        onChange={(event) => setMediaType(event.target.value as MediaType)}
-        aria-label="Media type"
-      >
-        {MEDIA_TYPES.map((m) => (
-          <option key={m} value={m}>
-            {MEDIA_LABELS[m]}
-          </option>
-        ))}
-      </select>
-      <input
-        className="newdoc__input"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') submit()
-        }}
-        placeholder="Title…"
-        aria-label="Title"
-        autoFocus
+    <div className="newlib">
+      <div className="newlib__row">
+        <select
+          className="newdoc__select"
+          value={mediaType}
+          onChange={(event) => setMediaType(event.target.value as MediaType)}
+          aria-label="Media type"
+        >
+          {MEDIA_TYPES.map((m) => (
+            <option key={m} value={m}>
+              {MEDIA_LABELS[m]}
+            </option>
+          ))}
+        </select>
+        <input
+          className="newdoc__input"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Title…"
+          aria-label="Title"
+          autoFocus
+        />
+        <input
+          className="newdoc__input newdoc__input--sm"
+          value={creator}
+          onChange={(event) => setCreator(event.target.value)}
+          placeholder="Creator"
+          aria-label="Creator"
+        />
+        <input
+          className="newdoc__input newdoc__input--xs"
+          value={year}
+          onChange={(event) => setYear(event.target.value)}
+          placeholder="Year"
+          aria-label="Year"
+          inputMode="numeric"
+        />
+        <select
+          className="newdoc__select"
+          value={rating}
+          onChange={(event) => setRating(event.target.value)}
+          aria-label="Rating"
+        >
+          <option value="">Rating</option>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <option key={n} value={n}>
+              {'★'.repeat(n)}
+            </option>
+          ))}
+        </select>
+        <input
+          className="newdoc__input newdoc__input--sm"
+          type="date"
+          value={consumedOn}
+          onChange={(event) => setConsumedOn(event.target.value)}
+          aria-label="Date consumed"
+          title="Date consumed"
+        />
+      </div>
+
+      <textarea
+        className="newlib__notes"
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        placeholder="Your entry — thoughts, notes, a review… (optional)"
+        aria-label="Entry notes"
+        rows={4}
       />
-      <input
-        className="newdoc__input newdoc__input--sm"
-        value={creator}
-        onChange={(event) => setCreator(event.target.value)}
-        placeholder="Creator"
-        aria-label="Creator"
-      />
-      <input
-        className="newdoc__input newdoc__input--xs"
-        value={year}
-        onChange={(event) => setYear(event.target.value)}
-        placeholder="Year"
-        aria-label="Year"
-        inputMode="numeric"
-      />
-      <select
-        className="newdoc__select"
-        value={rating}
-        onChange={(event) => setRating(event.target.value)}
-        aria-label="Rating"
-      >
-        <option value="">Rating</option>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <option key={n} value={n}>
-            {'★'.repeat(n)}
-          </option>
-        ))}
-      </select>
-      <input
-        className="newdoc__input newdoc__input--sm"
-        type="date"
-        value={consumedOn}
-        onChange={(event) => setConsumedOn(event.target.value)}
-        aria-label="Date consumed"
-        title="Date consumed"
-      />
-      <Button onClick={submit} disabled={create.isPending || title.trim() === ''}>
-        Log
-      </Button>
-      <Button variant="ghost" onClick={() => setOpen(false)}>
-        Cancel
-      </Button>
+
+      <div className="newlib__actions">
+        <Button onClick={submit} disabled={create.isPending || title.trim() === ''}>
+          Log
+        </Button>
+        <Button variant="ghost" onClick={() => setOpen(false)}>
+          Cancel
+        </Button>
+      </div>
     </div>
   )
 }

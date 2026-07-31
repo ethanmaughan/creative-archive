@@ -23,8 +23,10 @@ test('log library items with dates and sort them chronologically', async ({ page
     await page.getByLabel('Title').fill(title)
     await page.getByLabel('Date consumed').fill(consumed)
     await page.getByRole('button', { name: 'Log', exact: true }).click()
-    await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15_000 })
-    await page.getByRole('link', { name: 'Library', exact: true }).click()
+    // Stays on the Library — the new entry appears in the list right away (no navigation).
+    await expect(page.locator('.doc__title').filter({ hasText: title })).toBeVisible({
+      timeout: 15_000,
+    })
   }
 
   await logBook('Dune', '2026-05-01')
@@ -52,4 +54,37 @@ test('log library items with dates and sort them chronologically', async ({ page
   expect(fileText).toContain('consumedOn:')
   expect(fileText).toContain('2026-05-01')
   expect(fileText).toContain('logged:')
+})
+
+test('a library entry can be written inline and is saved with the item', async ({ page }) => {
+  await page.goto('/?e2e=1')
+  await page.evaluate(async () => {
+    const root = await navigator.storage.getDirectory()
+    await root.removeEntry('library', { recursive: true }).catch(() => undefined)
+  })
+  await page.getByRole('button', { name: /open archive folder/i }).click()
+  await expect(page.locator('.sidebar__foot')).toContainText('docs', { timeout: 60_000 })
+  await page.getByRole('link', { name: 'Library', exact: true }).click()
+
+  await page.getByRole('button', { name: '+ Log' }).click()
+  await page.getByLabel('Title').fill('Deep Work')
+  await page.getByLabel('Entry notes').fill('Cal Newport on focus — worth revisiting.')
+  await page.getByRole('button', { name: 'Log', exact: true }).click()
+
+  // The entry appears in the Library without leaving the page.
+  await expect(page.locator('.doc__title').filter({ hasText: 'Deep Work' })).toBeVisible({
+    timeout: 15_000,
+  })
+
+  // The written notes are saved as the document body.
+  const fileText = await page.evaluate(async () => {
+    const root = await navigator.storage.getDirectory()
+    const book = await (await root.getDirectoryHandle('library')).getDirectoryHandle('book')
+    return (await (await book.getFileHandle('deep-work.md')).getFile()).text()
+  })
+  expect(fileText).toContain('Cal Newport on focus — worth revisiting.')
+
+  // Opening the entry shows those notes in the editor.
+  await page.locator('.doc').filter({ hasText: 'Deep Work' }).click()
+  await expect(page.locator('.prose-editor')).toContainText('Cal Newport on focus')
 })
