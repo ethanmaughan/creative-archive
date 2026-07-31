@@ -33,6 +33,16 @@ disposable, and nothing ever leaves your machine.
 
 There's a **Help** page inside the app with the full syntax cheatsheet.
 
+## Download
+
+**macOS (Apple Silicon):** grab the latest `.dmg` from the
+[**Releases** page](https://github.com/ethanmaughan/creative-archive/releases/latest), open it, and
+drag the app to Applications.
+
+Creative Archive is free and isn't code-signed, so the first launch needs one extra click:
+**right-click the app → Open → Open**. macOS remembers the choice after that. (On an Intel Mac or
+another OS, run it from source — see below.)
+
 ## Run it locally
 
 **Requirements:** [Node.js](https://nodejs.org) 24, and **Chrome or Edge** (the folder access uses
