@@ -374,21 +374,10 @@
   flex-wrap: wrap;
   gap: 0.4rem;
 }
-.newlib__notes {
-  width: 100%;
-  resize: vertical;
-  font-family: inherit;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--bg, var(--surface));
-  color: var(--ink);
-}
-.newlib__notes:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+.newlib__editor .prose-editor {
+  min-height: 120px;
+  max-height: 40vh;
+  overflow-y: auto;
 }
 .newlib__actions {
   display: flex;

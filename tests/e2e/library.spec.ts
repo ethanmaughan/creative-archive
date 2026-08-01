@@ -68,7 +68,10 @@ test('a library entry can be written inline and is saved with the item', async (
 
   await page.getByRole('button', { name: '+ Log' }).click()
   await page.getByLabel('Title').fill('Deep Work')
-  await page.getByLabel('Entry notes').fill('Cal Newport on focus — worth revisiting.')
+  // The entry field is the full rich editor now.
+  const entryEditor = page.locator('.newlib__editor .ProseMirror')
+  await entryEditor.click()
+  await entryEditor.pressSequentially('Cal Newport on focus, worth revisiting.')
   await page.getByRole('button', { name: 'Log', exact: true }).click()
 
   // The entry appears in the Library without leaving the page.
@@ -82,7 +85,7 @@ test('a library entry can be written inline and is saved with the item', async (
     const book = await (await root.getDirectoryHandle('library')).getDirectoryHandle('book')
     return (await (await book.getFileHandle('deep-work.md')).getFile()).text()
   })
-  expect(fileText).toContain('Cal Newport on focus — worth revisiting.')
+  expect(fileText).toContain('Cal Newport on focus, worth revisiting.')
 
   // Opening the entry shows those notes in the editor.
   await page.locator('.doc').filter({ hasText: 'Deep Work' }).click()

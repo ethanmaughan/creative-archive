@@ -2,6 +2,8 @@ import { useState, type JSX } from 'react'
 import { useCreateLibraryItem } from '@/data/worker/hooks'
 import { Button } from '@/shared/ui/Button'
 import { MEDIA_TYPES, type MediaType } from '@/domain/models/document'
+import { DocumentEditor } from '@/features/studio/DocumentEditor'
+import { useAutocompleteSources } from '@/features/studio/use-autocomplete-sources'
 import { MEDIA_LABELS } from './media'
 
 export function NewLibraryItemButton(): JSX.Element {
@@ -14,6 +16,7 @@ export function NewLibraryItemButton(): JSX.Element {
   const [consumedOn, setConsumedOn] = useState('')
   const [body, setBody] = useState('')
   const create = useCreateLibraryItem()
+  const { queryDocs, queryTags } = useAutocompleteSources()
 
   const submit = (): void => {
     const trimmedTitle = title.trim()
@@ -115,14 +118,15 @@ export function NewLibraryItemButton(): JSX.Element {
         />
       </div>
 
-      <textarea
-        className="newlib__notes"
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        placeholder="Your entry — thoughts, notes, a review… (optional)"
-        aria-label="Entry notes"
-        rows={4}
-      />
+      <div className="newlib__editor" aria-label="Entry notes">
+        <DocumentEditor
+          value={body}
+          onChange={setBody}
+          docTitle={title}
+          onQueryDocs={queryDocs}
+          onQueryTags={queryTags}
+        />
+      </div>
 
       <div className="newlib__actions">
         <Button onClick={submit} disabled={create.isPending || title.trim() === ''}>
