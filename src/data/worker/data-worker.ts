@@ -45,6 +45,15 @@ import type { AiClient } from '@/data/ai/ai-client'
 import { QueryTrackerRepository } from '@/data/repositories/query-tracker-repository'
 import { canTransition } from '@/domain/services/submission-workflow'
 import type { SubmissionStatus } from '@/domain/models/submission'
+import {
+  AGENT_COLUMNS,
+  agentToRecord,
+  agentsCsvPath,
+  manuscriptSlugFromPath,
+  recordToAgent,
+  type Agent,
+} from '@/domain/models/agent'
+import { parseCsvRecords, recordsToCsv } from '@/shared/csv'
 import { slugify } from '@/shared/slug'
 import { buildSnippet, queryTerms, toFtsQuery } from './fts-query'
 import type {
@@ -498,6 +507,45 @@ const api: DataApi = {
 
   async getGraph() {
     return graph ? graph.graph() : { nodes: [], edges: [] }
+  },
+
+  // --- Query tracker (CSV-backed literary agents, one file per manuscript) ---
+
+  async listAgentManuscripts(): Promise<string[]> {
+    if (!store) return []
+    const slugs: string[] = []
+    for (const entry of await store.list()) {
+      if (entry.kind !== 'file') continue
+      const slug = manuscriptSlugFromPath(normalizeRelPath(entry.relPath))
+      if (slug !== null) slugs.push(slug)
+    }
+    return slugs.sort((a, b) => a.localeCompare(b))
+  },
+
+  async listAgents(slug: string): Promise<Agent[]> {
+    if (!store) return []
+    let raw: string
+    try {
+      raw = await store.readTextFile(agentsCsvPath(slug))
+    } catch {
+      return [] // no CSV yet for this manuscript
+    }
+    return parseCsvRecords(raw)
+      .map(recordToAgent)
+      .filter((agent) => agent.name !== '')
+  },
+
+  async saveAgents(slug: string, agents: Agent[]): Promise<void> {
+    const open = requireOpen()
+    const csv = recordsToCsv(AGENT_COLUMNS, agents.map(agentToRecord))
+    await open.store.writeTextFile(agentsCsvPath(slug), csv)
+  },
+
+  async createAgentManuscript(slug: string): Promise<void> {
+    const open = requireOpen()
+    const path = agentsCsvPath(slug)
+    if (await open.store.stat(path)) return
+    await open.store.writeTextFile(path, recordsToCsv(AGENT_COLUMNS, []))
   },
 
   async aiStatus() {

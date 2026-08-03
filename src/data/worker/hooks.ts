@@ -6,6 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { useSession } from '@/app/store/session'
+import type { Agent } from '@/domain/models/agent'
 import type { SubmissionStatus } from '@/domain/models/submission'
 import { getDataClient } from './data-client'
 import type {
@@ -245,6 +246,45 @@ export function useDocumentTags(documentId: string | null): UseQueryResult<strin
     queryKey: ['document-tags', documentId],
     queryFn: () => getDataClient().listDocumentTags(documentId as string),
     enabled: ready && documentId !== null && documentId.length > 0,
+  })
+}
+
+export function useAgentManuscripts(): UseQueryResult<string[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['agent-manuscripts'],
+    queryFn: () => getDataClient().listAgentManuscripts(),
+    enabled: ready,
+  })
+}
+
+export function useAgents(slug: string | null): UseQueryResult<Agent[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['agents', slug],
+    queryFn: () => getDataClient().listAgents(slug as string),
+    enabled: ready && slug !== null && slug.length > 0,
+  })
+}
+
+export function useSaveAgents(): UseMutationResult<void, Error, { slug: string; agents: Agent[] }> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, agents }: { slug: string; agents: Agent[] }) =>
+      getDataClient().saveAgents(slug, agents),
+    onSuccess: (_data, { slug }) => {
+      void queryClient.invalidateQueries({ queryKey: ['agents', slug] })
+    },
+  })
+}
+
+export function useCreateAgentManuscript(): UseMutationResult<void, Error, string> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (slug: string) => getDataClient().createAgentManuscript(slug),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['agent-manuscripts'] })
+    },
   })
 }
 

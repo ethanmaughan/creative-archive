@@ -3,6 +3,7 @@ import { useCreateSubmission, useDocuments, useMarkets } from '@/data/worker/hoo
 import { getDataClient } from '@/data/worker/data-client'
 import { downloadText } from '@/shared/download'
 import { Button } from '@/shared/ui/Button'
+import { AgentTracker } from './AgentTracker'
 import { MarketManager } from './MarketManager'
 import { SubmissionList } from './SubmissionList'
 
@@ -67,6 +68,8 @@ export function QueryTrackerPage(): JSX.Element {
           </Button>
         </div>
       </div>
+
+      <AgentTracker />
 
       <MarketManager />
 

@@ -1,5 +1,6 @@
 /** The typed contract between the UI (main thread) and the data worker. */
 import type { FileStore } from '@/data/storage/file-store/file-store'
+import type { Agent } from '@/domain/models/agent'
 import type { MediaType } from '@/domain/models/document'
 import type { SpaceDocKind, SpaceType } from '@/domain/models/space'
 import type { MarketKind } from '@/domain/models/market'
@@ -282,6 +283,14 @@ export interface DataApi {
   runQuery(queryText: string): Promise<DocumentDTO[]>
   /** The document graph (nodes + deduped `[[wikilink]]` edges) for the graph view. */
   getGraph(): Promise<GraphDTO>
+  /** Query tracker — manuscript slugs that have a `query-tracker/<slug>.agents.csv`. */
+  listAgentManuscripts(): Promise<string[]>
+  /** Query tracker — the agents for a manuscript (parsed from its CSV), or [] if none. */
+  listAgents(slug: string): Promise<Agent[]>
+  /** Query tracker — write the full agent list back to the manuscript's CSV. */
+  saveAgents(slug: string, agents: Agent[]): Promise<void>
+  /** Query tracker — create an empty agents CSV for a new manuscript slug (no-op if it exists). */
+  createAgentManuscript(slug: string): Promise<void>
   /** Whether local AI (Ollama) is reachable. */
   aiStatus(): Promise<AiStatus>
   /** Summarize a document; writes the summary into a writable workspace. */

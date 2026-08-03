@@ -9,7 +9,7 @@
  *
  * Pure, path-based logic. No IO.
  */
-import { isIndexablePath } from './workspace'
+import { isIndexablePath, isReservedDataPath } from './workspace'
 
 export type SourceCategory = 'text' | 'docx' | 'pdf' | 'image' | 'other'
 
@@ -70,6 +70,7 @@ function hasHiddenSegment(relPath: string): boolean {
  */
 export function isSourceFilePath(relPath: string): boolean {
   if (hasHiddenSegment(relPath)) return false
+  if (isReservedDataPath(relPath)) return false // app-managed data (e.g. query-tracker CSVs)
   if (isIndexablePath(relPath)) return false
   return true
 }
