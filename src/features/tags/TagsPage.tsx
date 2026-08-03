@@ -8,9 +8,12 @@ export function TagsPage(): JSX.Element {
   const [params] = useSearchParams()
   const { data, isLoading } = useTags()
   const [selected, setSelected] = useState<string | null>(params.get('tag'))
+  const [filter, setFilter] = useState('')
   const { data: docs } = useDocumentsByTag(selected)
 
   const tags = data ?? []
+  const needle = filter.trim().toLowerCase()
+  const shown = needle === '' ? tags : tags.filter((tag) => tag.name.toLowerCase().includes(needle))
 
   return (
     <div className="content__inner">
@@ -32,19 +35,35 @@ export function TagsPage(): JSX.Element {
           No tags yet. Add <code>#tags</code> anywhere in a document and they’ll gather here.
         </p>
       ) : (
-        <div className="tag-cloud">
-          {tags.map((tag) => (
-            <button
-              key={tag.name}
-              type="button"
-              className={`tag-chip${selected === tag.name ? ' is-active' : ''}`}
-              onClick={() => setSelected((current) => (current === tag.name ? null : tag.name))}
-            >
-              #{tag.name}
-              <span className="tag-chip__count">{tag.count}</span>
-            </button>
-          ))}
-        </div>
+        <>
+          <input
+            className="tag-search"
+            type="search"
+            placeholder="Search tags…"
+            aria-label="Search tags"
+            value={filter}
+            onChange={(event) => setFilter(event.target.value)}
+          />
+          {shown.length === 0 ? (
+            <p className="page-sub">
+              No tags match “{filter.trim()}”.
+            </p>
+          ) : (
+            <div className="tag-cloud">
+              {shown.map((tag) => (
+                <button
+                  key={tag.name}
+                  type="button"
+                  className={`tag-chip${selected === tag.name ? ' is-active' : ''}`}
+                  onClick={() => setSelected((current) => (current === tag.name ? null : tag.name))}
+                >
+                  #{tag.name}
+                  <span className="tag-chip__count">{tag.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {selected !== null ? (

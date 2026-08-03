@@ -40,4 +40,12 @@ test('inline #tags gather and filter documents', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Tags' })).toBeVisible({ timeout: 15_000 })
   await expect(page.locator('.tag-chip.is-active')).toContainText('fantasy')
   await expect(page.getByRole('link', { name: /Tagged Note/ })).toBeVisible({ timeout: 15_000 })
+
+  // The tag search filters the cloud live — no match hides everything, a prefix brings it back.
+  const search = page.getByRole('searchbox', { name: 'Search tags' })
+  await search.fill('zzz')
+  await expect(page.getByText(/No tags match/)).toBeVisible()
+  await expect(page.locator('.tag-chip')).toHaveCount(0)
+  await search.fill('fan')
+  await expect(page.locator('.tag-chip').filter({ hasText: 'fantasy' })).toBeVisible()
 })

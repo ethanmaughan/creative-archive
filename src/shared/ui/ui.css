@@ -1081,6 +1081,26 @@
 .hashtag:hover {
   text-decoration: underline;
 }
+.tag-search {
+  display: block;
+  width: 100%;
+  max-width: 22rem;
+  margin-bottom: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.7rem;
+  outline: none;
+}
+.tag-search::placeholder {
+  color: var(--faint);
+}
+.tag-search:focus {
+  border-color: var(--accent);
+}
 .tag-cloud {
   display: flex;
   flex-wrap: wrap;
