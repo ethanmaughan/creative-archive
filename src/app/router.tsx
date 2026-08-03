@@ -7,7 +7,7 @@ import { SpacesPage } from '@/features/spaces/SpacesPage'
 import { SpaceView } from '@/features/spaces/SpaceView'
 import { TagsPage } from '@/features/tags/TagsPage'
 import { LibraryPage } from '@/features/library/LibraryPage'
-import { ConnectionsPage } from '@/features/connections/ConnectionsPage'
+import { TopicView } from '@/features/topics/TopicView'
 import { GraphPage } from '@/features/graph/GraphPage'
 import { QueryTrackerPage } from '@/features/query-tracker/QueryTrackerPage'
 import { SearchPage } from '@/features/search/SearchPage'
@@ -21,13 +21,13 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <StudioPage /> },
       { path: 'doc/*', element: <DocumentView /> },
+      { path: 'topic/:name', element: <TopicView /> },
       { path: 'spaces', element: <SpacesPage /> },
       { path: 'space/:slug', element: <SpaceView /> },
       { path: 'files', element: <FilesPage /> },
       { path: 'file/*', element: <SourceView /> },
       { path: 'tags', element: <TagsPage /> },
       { path: 'library', element: <LibraryPage /> },
-      { path: 'connections', element: <ConnectionsPage /> },
       { path: 'graph', element: <GraphPage /> },
       { path: 'query-tracker', element: <QueryTrackerPage /> },
       { path: 'search', element: <SearchPage /> },

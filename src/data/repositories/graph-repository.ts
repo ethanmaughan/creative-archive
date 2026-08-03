@@ -1,5 +1,5 @@
-/** The knowledge graph: documents as nodes, resolved `[[wikilinks]]` + manual connections as
- *  edges (deduped, undirected). Feeds the graph view. */
+/** The knowledge graph: documents as nodes, resolved `[[wikilinks]]` as edges (deduped,
+ *  undirected). Feeds the graph view. */
 import type { Sqlite } from '../storage/sqlite-index/migrator'
 
 export interface GraphNode {
@@ -29,14 +29,9 @@ export class GraphRepository {
       )
       .map((r) => ({ id: r.id, relPath: r.rel_path, title: r.title, kind: r.kind }))
 
-    const raw = [
-      ...this.db.selectRows<{ s: string; t: string }>(
-        'SELECT DISTINCT source_id AS s, target_id AS t FROM links WHERE target_id IS NOT NULL AND source_id <> target_id;',
-      ),
-      ...this.db.selectRows<{ s: string; t: string }>(
-        "SELECT source_id AS s, target_id AS t FROM connections WHERE source_type = 'document' AND target_type = 'document' AND source_id <> target_id;",
-      ),
-    ]
+    const raw = this.db.selectRows<{ s: string; t: string }>(
+      'SELECT DISTINCT source_id AS s, target_id AS t FROM links WHERE target_id IS NOT NULL AND source_id <> target_id;',
+    )
 
     const present = new Set(nodes.map((n) => n.id))
     const seen = new Set<string>()

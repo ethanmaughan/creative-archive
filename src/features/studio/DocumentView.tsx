@@ -5,8 +5,7 @@ import { getDataClient } from '@/data/worker/data-client'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { kindLabel } from '@/shared/ui/kind-label'
-import { ConnectionsPanel } from '@/features/connections/ConnectionsPanel'
-import { BacklinksPanel } from '@/features/links/BacklinksPanel'
+import { ReferencesPanel } from '@/features/links/ReferencesPanel'
 import { SummarizePanel } from '@/features/ai/SummarizePanel'
 import { DocumentEditor } from './DocumentEditor'
 import { useAutocompleteSources } from './use-autocomplete-sources'
@@ -45,7 +44,9 @@ export function DocumentView(): JSX.Element {
         return
       }
       const rel = resolverRef.current.get(page.toLowerCase())
+      // An un-filed `[[topic]]` has no note yet — land on its topic page (references + create).
       if (rel !== undefined) void navigate(`/doc/${rel}${suffix}`)
+      else void navigate(`/topic/${encodeURIComponent(page)}`)
     },
     [navigate, relPath],
   )
@@ -160,8 +161,7 @@ export function DocumentView(): JSX.Element {
         </Button>
       </div>
 
-      {doc.id !== '' ? <BacklinksPanel documentId={doc.id} /> : null}
-      {doc.id !== '' ? <ConnectionsPanel documentId={doc.id} /> : null}
+      {doc.id !== '' ? <ReferencesPanel documentId={doc.id} /> : null}
       <SummarizePanel relPath={relPath} />
     </div>
   )

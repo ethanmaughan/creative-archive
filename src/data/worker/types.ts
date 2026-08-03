@@ -141,29 +141,22 @@ export interface FacetDTO {
   readonly content: string
 }
 
-/** A connection graph edge (document↔document), with both ends resolved for display. */
-export interface ConnectionEdgeDTO {
-  readonly id: string
-  readonly relationship: string | null
+/** One document's references to a target: the source doc plus the line(s) where the
+ *  `[[wikilink]]` appears, for a Logseq-style "linked references" preview. */
+export interface ReferenceDTO {
   readonly sourceId: string
-  readonly sourceTitle: string | null
-  readonly sourceRelPath: string | null
-  readonly targetId: string
-  readonly targetTitle: string | null
-  readonly targetRelPath: string | null
-}
-
-export interface CreateConnectionInput {
-  readonly sourceId: string
-  readonly targetId: string
-  readonly relationship?: string
-}
-
-/** A document that links to another via a resolved `[[wikilink]]` (a backlink). */
-export interface BacklinkDTO {
-  readonly id: string
-  readonly title: string | null
   readonly relPath: string
+  readonly title: string | null
+  readonly kind: string
+  readonly contexts: string[]
+}
+
+/** A topic page for a `[[title]]`: the note that defines it (if any) plus everything that
+ *  references it. `definition` is null for an un-filed topic (no note exists yet). */
+export interface TopicPageDTO {
+  readonly name: string
+  readonly definition: DocumentDTO | null
+  readonly references: ReferenceDTO[]
 }
 
 /** A tag with the number of documents carrying it. */
@@ -273,12 +266,10 @@ export interface DataApi {
   createLibraryItem(input: CreateLibraryItemInput): Promise<DocumentContent>
   /** List creative-extraction facets, optionally filtered to one facet kind. */
   listFacets(facet?: string): Promise<FacetDTO[]>
-  /** All connection edges. */
-  listConnections(): Promise<ConnectionEdgeDTO[]>
-  /** Connection edges touching a specific document (as source or target). */
-  listDocumentConnections(documentId: string): Promise<ConnectionEdgeDTO[]>
-  /** Documents that link to this one via a resolved `[[wikilink]]` (backlinks). */
-  listBacklinks(documentId: string): Promise<BacklinkDTO[]>
+  /** Documents that link to this one via a `[[wikilink]]`, with the linking line(s) as context. */
+  listReferences(documentId: string): Promise<ReferenceDTO[]>
+  /** A topic page for a `[[title]]`: its defining note (if any) plus everything referencing it. */
+  topicPage(name: string): Promise<TopicPageDTO>
   /** All tags applied to documents, with counts. */
   listTags(): Promise<TagCountDTO[]>
   /** Documents carrying a given tag. */
@@ -289,11 +280,8 @@ export interface DataApi {
   readEmbed(relPath: string, fragment: string | null): Promise<EmbedContentDTO | null>
   /** Run an inline ` ```query ` block's declarative query, returning matching documents. */
   runQuery(queryText: string): Promise<DocumentDTO[]>
-  /** The document graph (nodes + deduped wikilink/connection edges) for the graph view. */
+  /** The document graph (nodes + deduped `[[wikilink]]` edges) for the graph view. */
   getGraph(): Promise<GraphDTO>
-  /** Create a document↔document connection (rejects self-references). */
-  createConnection(input: CreateConnectionInput): Promise<void>
-  deleteConnection(id: string): Promise<void>
   /** Whether local AI (Ollama) is reachable. */
   aiStatus(): Promise<AiStatus>
   /** Summarize a document; writes the summary into a writable workspace. */

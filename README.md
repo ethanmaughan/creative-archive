@@ -19,9 +19,11 @@ disposable, and nothing ever leaves your machine.
 - **Plain files, always** — Markdown + frontmatter on disk. Delete the index and it rebuilds from
   your folder. Open the files in any editor; they're yours.
 - **Spaces** — a workspace per project or class, with a shared Library and research across them.
-- **Linking, the good parts** — `[[wikilinks]]` with backlinks, inline `#tags`, `^id` block and
-  heading references, `![[embeds]]` (inline transclusion), and a live **graph view** — with `[[`
-  and `#` autocomplete as you type.
+- **Linking, the good parts** — `[[wikilinks]]` with contextual linked references (every note
+  shows what points at it, and the line it's mentioned in). Link a topic before you've written it
+  and get a **topic page** that collects its references until you promote it to a note. Plus inline
+  `#tags`, `^id` block and heading references, `![[embeds]]` (inline transclusion), and a live
+  **graph view** — with `[[` and `#` autocomplete as you type.
 - **Inline queries** — a ` ```query ` block lists matching notes, read-only and declarative.
 - **Search that reaches inside uploads** — full-text across your notes _and_ the text of `.docx`
   and `.pdf` files you drop in.
