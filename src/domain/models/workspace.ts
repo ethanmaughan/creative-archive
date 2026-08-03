@@ -32,6 +32,17 @@ export function workspaceForPath(relPath: string): WorkspaceDef | undefined {
   return BY_TOP.get(topSegment(relPath))
 }
 
+/**
+ * App-managed data folders that hold neither indexable documents nor read-only sources — e.g.
+ * the CSV-backed query tracker. They live in the archive folder (findable, spreadsheet-editable)
+ * but are kept out of the document + source indexes so they don't clutter search or the Files list.
+ */
+export const RESERVED_DATA_DIRS: readonly string[] = ['query-tracker']
+
+export function isReservedDataPath(relPath: string): boolean {
+  return RESERVED_DATA_DIRS.includes(topSegment(relPath))
+}
+
 /** A canonical, indexable document: a Markdown file inside a known workspace. */
 export function isIndexablePath(relPath: string): boolean {
   if (!relPath.toLowerCase().endsWith('.md')) return false
