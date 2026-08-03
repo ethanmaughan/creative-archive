@@ -941,7 +941,65 @@
 .agent-form__actions {
   display: flex;
   gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
   margin-top: 0.7rem;
+}
+.agent-import__hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin: 0 0 0.6rem;
+  line-height: 1.5;
+}
+.agent-import__box {
+  width: 100%;
+  min-height: 120px;
+  box-sizing: border-box;
+}
+.agent-import__msg {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--accent-ink);
+}
+.agent-refresh {
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.9rem;
+  margin-bottom: 0.7rem;
+}
+.agent-refresh__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.agent-refresh__threshold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.agent-refresh__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+}
+.agent-refresh__list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.agent-refresh__date {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--faint);
 }
 .qt-markets {
   list-style: none;
