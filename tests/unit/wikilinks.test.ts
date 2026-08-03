@@ -27,7 +27,7 @@ describe('wikilink graph', () => {
     })
     await reconcile(fs, db, { now })
 
-    const backlinks = new LinkRepository(db).backlinks('b')
+    const backlinks = new LinkRepository(db).referencesTo('b')
     expect(backlinks).toHaveLength(1)
     expect(backlinks[0]?.sourceId).toBe('a')
     expect(backlinks[0]?.title).toBe('Note A')
@@ -41,7 +41,7 @@ describe('wikilink graph', () => {
     await reconcile(fs, db, { now })
     expect(linkCount()).toBe(2)
     // one resolved (to b), one broken (null target)
-    expect(new LinkRepository(db).backlinks('b')).toHaveLength(1)
+    expect(new LinkRepository(db).referencesTo('b')).toHaveLength(1)
     const broken = db.selectRows<{ n: number }>(
       'SELECT count(*) AS n FROM links WHERE target_id IS NULL;',
     )[0]?.n
@@ -53,13 +53,13 @@ describe('wikilink graph', () => {
       'notebook/a.md': '---\nid: a\ntitle: Note A\n---\nlink to [[Future]].\n',
     })
     await reconcile(fs, db, { now })
-    expect(new LinkRepository(db).backlinks('f')).toHaveLength(0) // nothing resolves yet
+    expect(new LinkRepository(db).referencesTo('f')).toHaveLength(0) // nothing resolves yet
 
     // Create the target and reindex just that file.
     await fs.writeTextFile('notebook/future.md', '---\nid: f\ntitle: Future\n---\n.\n')
     await reindexOne(fs, db, 'notebook/future.md', { now })
 
-    const backlinks = new LinkRepository(db).backlinks('f')
+    const backlinks = new LinkRepository(db).referencesTo('f')
     expect(backlinks).toHaveLength(1)
     expect(backlinks[0]?.sourceId).toBe('a')
   })
@@ -70,17 +70,31 @@ describe('wikilink graph', () => {
       'notebook/b.md': '---\nid: b\ntitle: Note B\n---\n.\n',
     })
     await reconcile(fs, db, { now })
-    expect(new LinkRepository(db).backlinks('b')).toHaveLength(1)
+    expect(new LinkRepository(db).referencesTo('b')).toHaveLength(1)
 
     await fs.deleteFile('notebook/b.md')
     await reindexOne(fs, db, 'notebook/b.md', { now })
 
-    expect(new LinkRepository(db).backlinks('b')).toHaveLength(0)
+    expect(new LinkRepository(db).referencesTo('b')).toHaveLength(0)
     // The source's link row survives but is now unresolved.
     expect(
       db.selectRows<{ n: number }>('SELECT count(*) AS n FROM links WHERE source_id = ?;', ['a'])[0]
         ?.n,
     ).toBe(1)
+  })
+
+  it('exposes references to a bare, un-filed topic by written text (case-insensitive)', async () => {
+    const fs = new MemoryFileStore({
+      'notebook/a.md': '---\nid: a\ntitle: Note A\n---\nA nod to [[Determinism]].\n',
+      'notebook/c.md': '---\nid: c\ntitle: Note C\n---\nAnother [[determinism]] beat.\n',
+    })
+    await reconcile(fs, db, { now })
+    // No note titled "Determinism" exists, so it never resolves by id...
+    expect(new LinkRepository(db).referencesTo('determinism')).toHaveLength(0)
+    // ...but both notes surface as references to the bare topic text.
+    const refs = new LinkRepository(db).referencesToText(['determinism'])
+    expect(refs.map((r) => r.sourceId).sort()).toEqual(['a', 'c'])
+    expect(typeof refs[0]?.kind).toBe('string')
   })
 
   it('rebuilds the whole graph on a full reconcile (delete-index-and-rebuild)', async () => {
@@ -91,6 +105,6 @@ describe('wikilink graph', () => {
     await reconcile(fs, db, { now })
     await reconcile(fs, db, { now, rebuild: true })
     expect(linkCount()).toBe(1)
-    expect(new LinkRepository(db).backlinks('b')).toHaveLength(1)
+    expect(new LinkRepository(db).referencesTo('b')).toHaveLength(1)
   })
 })

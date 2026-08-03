@@ -11,10 +11,7 @@ import { getDataClient } from './data-client'
 import type {
   AiRunResultDTO,
   AiStatus,
-  BacklinkDTO,
-  ConnectionEdgeDTO,
   GraphDTO,
-  CreateConnectionInput,
   CreateDocumentInput,
   CreateLibraryItemInput,
   CreateMarketInput,
@@ -27,11 +24,13 @@ import type {
   LibraryItemDTO,
   LibrarySort,
   MarketDTO,
+  ReferenceDTO,
   SearchResultDTO,
   SourceContentDTO,
   SpaceDTO,
   SubmissionDTO,
   TagCountDTO,
+  TopicPageDTO,
   TreeEntryDTO,
 } from './types'
 
@@ -135,7 +134,8 @@ export function useSaveDocument(): UseMutationResult<DocumentContent, Error, Sav
       queryClient.setQueryData(['document', doc.relPath], doc)
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
       void queryClient.invalidateQueries({ queryKey: ['tree'] })
-      void queryClient.invalidateQueries({ queryKey: ['backlinks'] })
+      void queryClient.invalidateQueries({ queryKey: ['references'] })
+      void queryClient.invalidateQueries({ queryKey: ['topic'] })
       void queryClient.invalidateQueries({ queryKey: ['tags'] })
       void queryClient.invalidateQueries({ queryKey: ['tag-docs'] })
       void queryClient.invalidateQueries({ queryKey: ['document-tags'] })
@@ -154,6 +154,9 @@ export function useCreateDocument(): UseMutationResult<
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
       void queryClient.invalidateQueries({ queryKey: ['tree'] })
+      // A new note may resolve previously-broken `[[topic]]` links elsewhere.
+      void queryClient.invalidateQueries({ queryKey: ['references'] })
+      void queryClient.invalidateQueries({ queryKey: ['topic'] })
     },
   })
 }
@@ -191,26 +194,6 @@ export function useFacets(facet: string | null): UseQueryResult<FacetDTO[]> {
   })
 }
 
-export function useAllConnections(): UseQueryResult<ConnectionEdgeDTO[]> {
-  const ready = useSession((s) => s.status === 'ready')
-  return useQuery({
-    queryKey: ['connections'],
-    queryFn: () => getDataClient().listConnections(),
-    enabled: ready,
-  })
-}
-
-export function useDocumentConnections(
-  documentId: string | null,
-): UseQueryResult<ConnectionEdgeDTO[]> {
-  const ready = useSession((s) => s.status === 'ready')
-  return useQuery({
-    queryKey: ['connections', 'doc', documentId],
-    queryFn: () => getDataClient().listDocumentConnections(documentId as string),
-    enabled: ready && documentId !== null && documentId.length > 0,
-  })
-}
-
 export function useGraph(): UseQueryResult<GraphDTO> {
   const ready = useSession((s) => s.status === 'ready')
   return useQuery({
@@ -220,12 +203,21 @@ export function useGraph(): UseQueryResult<GraphDTO> {
   })
 }
 
-export function useBacklinks(documentId: string | null): UseQueryResult<BacklinkDTO[]> {
+export function useReferences(documentId: string | null): UseQueryResult<ReferenceDTO[]> {
   const ready = useSession((s) => s.status === 'ready')
   return useQuery({
-    queryKey: ['backlinks', documentId],
-    queryFn: () => getDataClient().listBacklinks(documentId as string),
+    queryKey: ['references', documentId],
+    queryFn: () => getDataClient().listReferences(documentId as string),
     enabled: ready && documentId !== null && documentId.length > 0,
+  })
+}
+
+export function useTopicPage(name: string | null): UseQueryResult<TopicPageDTO> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['topic', name],
+    queryFn: () => getDataClient().topicPage(name as string),
+    enabled: ready && name !== null && name.length > 0,
   })
 }
 
@@ -253,26 +245,6 @@ export function useDocumentTags(documentId: string | null): UseQueryResult<strin
     queryKey: ['document-tags', documentId],
     queryFn: () => getDataClient().listDocumentTags(documentId as string),
     enabled: ready && documentId !== null && documentId.length > 0,
-  })
-}
-
-export function useCreateConnection(): UseMutationResult<void, Error, CreateConnectionInput> {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (input: CreateConnectionInput) => getDataClient().createConnection(input),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['connections'] })
-    },
-  })
-}
-
-export function useDeleteConnection(): UseMutationResult<void, Error, string> {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => getDataClient().deleteConnection(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['connections'] })
-    },
   })
 }
 

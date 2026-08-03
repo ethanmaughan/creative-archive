@@ -22,8 +22,7 @@ import { SourceRepository } from '@/data/repositories/source-repository'
 import { SpaceRepository } from '@/data/repositories/space-repository'
 import { LibraryRepository } from '@/data/repositories/library-repository'
 import { ExtractionRepository } from '@/data/repositories/extraction-repository'
-import { ConnectionRepository } from '@/data/repositories/connection-repository'
-import { LinkRepository } from '@/data/repositories/link-repository'
+import { LinkRepository, type ReferenceSource } from '@/data/repositories/link-repository'
 import { GraphRepository } from '@/data/repositories/graph-repository'
 import { TagRepository } from '@/data/repositories/tag-repository'
 import { classifyKind, isIndexablePath } from '@/domain/models/workspace'
@@ -38,7 +37,8 @@ import {
 import { spaceMarkerPath, spacePathPrefix, subfolderForSpaceKind } from '@/domain/models/space'
 import { parseBlocks, extractHeadingSection } from '@/domain/services/parse-blocks'
 import { parseQuery } from '@/domain/services/parse-query'
-import { validateConnection } from '@/domain/services/connection-rules'
+import { wikilinkKey } from '@/domain/services/parse-wikilinks'
+import { extractLinkContexts } from '@/domain/services/link-context'
 import { OllamaClient } from '@/data/ai/ollama-client'
 import { checkConsistency, suggestEdits, summarizeDocument } from '@/data/ai/ai-service'
 import type { AiClient } from '@/data/ai/ai-client'
@@ -51,7 +51,6 @@ import type {
   CreatableKind,
   CreateDocumentInput,
   CreateLibraryItemInput,
-  CreateConnectionInput,
   CreateMarketInput,
   CreateSubmissionInput,
   CreateSpaceInput,
@@ -60,10 +59,12 @@ import type {
   DocumentContent,
   DocumentDTO,
   OpenResult,
+  ReferenceDTO,
   SaveDocumentPatch,
   SearchResultDTO,
   SourceContentDTO,
   SpaceDTO,
+  TopicPageDTO,
   TreeEntryDTO,
 } from './types'
 
@@ -74,7 +75,6 @@ let sources: SourceRepository | null = null
 let spaces: SpaceRepository | null = null
 let library: LibraryRepository | null = null
 let extraction: ExtractionRepository | null = null
-let connections: ConnectionRepository | null = null
 let links: LinkRepository | null = null
 let graph: GraphRepository | null = null
 let tags: TagRepository | null = null
@@ -122,6 +122,34 @@ function requireOpen(): { db: Sqlite; store: FileStore } {
   return { db, store }
 }
 
+/** The keys a `[[wikilink]]` can use to name this target: its title and its filename. */
+function targetKeys(title: string | null, relPath: string): Set<string> {
+  const keys = new Set<string>()
+  if (title) keys.add(wikilinkKey(title))
+  keys.add(wikilinkKey(basenameOf(relPath).replace(/\.md$/i, '')))
+  return keys
+}
+
+/** For each source that links to a target, pull the line(s) where the link appears. */
+async function buildReferences(
+  fileStore: FileStore,
+  sources: readonly ReferenceSource[],
+  keys: Set<string>,
+): Promise<ReferenceDTO[]> {
+  const out: ReferenceDTO[] = []
+  for (const s of sources) {
+    let contexts: string[] = []
+    try {
+      const raw = await fileStore.readTextFile(s.relPath)
+      contexts = extractLinkContexts(parseFrontmatter(raw).body, keys)
+    } catch {
+      // Source vanished between indexing and reading — list it without context.
+    }
+    out.push({ sourceId: s.sourceId, relPath: s.relPath, title: s.title, kind: s.kind, contexts })
+  }
+  return out
+}
+
 async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }> {
   if (!db) {
     db = await openOpfs()
@@ -131,7 +159,6 @@ async function ensureDb(): Promise<{ db: Sqlite; documents: DocumentRepository }
     spaces = new SpaceRepository(db)
     library = new LibraryRepository(db)
     extraction = new ExtractionRepository(db)
-    connections = new ConnectionRepository(db)
     links = new LinkRepository(db)
     graph = new GraphRepository(db)
     tags = new TagRepository(db)
@@ -403,19 +430,24 @@ const api: DataApi = {
     return extraction ? extraction.all(facet) : []
   },
 
-  async listConnections() {
-    return connections ? connections.all() : []
+  async listReferences(documentId: string): Promise<ReferenceDTO[]> {
+    if (!links || !documents || !store) return []
+    const doc = documents.all().find((d) => d.id === documentId)
+    if (!doc) return []
+    return buildReferences(store, links.referencesTo(documentId), targetKeys(doc.title, doc.relPath))
   },
 
-  async listDocumentConnections(documentId: string) {
-    return connections ? connections.forDocument(documentId) : []
-  },
-
-  async listBacklinks(documentId: string) {
-    if (!links) return []
-    return links
-      .backlinks(documentId)
-      .map((b) => ({ id: b.sourceId, title: b.title, relPath: b.relPath }))
+  async topicPage(name: string): Promise<TopicPageDTO> {
+    const trimmed = name.trim()
+    const empty: TopicPageDTO = { name: trimmed, definition: null, references: [] }
+    if (!links || !documents || !store || trimmed === '') return empty
+    const key = wikilinkKey(trimmed)
+    // Does a note already define this topic (by title or filename)? Then it *is* the page.
+    const def = documents.all().find((d) => targetKeys(d.title, d.relPath).has(key))
+    if (def) return { name: trimmed, definition: toDto(def), references: [] }
+    // Un-filed topic: gather everything that links to the bare name, with context.
+    const references = await buildReferences(store, links.referencesToText([key]), new Set([key]))
+    return { name: trimmed, definition: null, references }
   },
 
   async listTags() {
@@ -466,29 +498,6 @@ const api: DataApi = {
 
   async getGraph() {
     return graph ? graph.graph() : { nodes: [], edges: [] }
-  },
-
-  async createConnection(input: CreateConnectionInput) {
-    if (!connections) throw new Error('No archive is open')
-    const validation = validateConnection({
-      source: { type: 'document', id: input.sourceId },
-      target: { type: 'document', id: input.targetId },
-      ...(input.relationship !== undefined ? { relationship: input.relationship } : {}),
-    })
-    if (!validation.valid) {
-      throw new Error(validation.issues.map((issue) => issue.message).join('; '))
-    }
-    connections.insert({
-      id: crypto.randomUUID(),
-      sourceId: input.sourceId,
-      targetId: input.targetId,
-      relationship: input.relationship ?? null,
-      createdAt: new Date().toISOString(),
-    })
-  },
-
-  async deleteConnection(id: string) {
-    connections?.remove(id)
   },
 
   async aiStatus() {

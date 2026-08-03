@@ -39,7 +39,7 @@ describe('block references', () => {
     await reconcile(fs, db, { now })
 
     // Backlinks still resolve at document granularity.
-    expect(new LinkRepository(db).backlinks('b').map((x) => x.sourceId)).toEqual(['a'])
+    expect(new LinkRepository(db).referencesTo('b').map((x) => x.sourceId)).toEqual(['a'])
     // The block anchor is recorded on the link.
     const targetBlocks = db
       .selectRows<{ target_block: string | null }>(

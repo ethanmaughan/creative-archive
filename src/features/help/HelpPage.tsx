@@ -45,7 +45,13 @@ export function HelpPage(): JSX.Element {
       <Section title="Linking notes">
         <Row code="[[Note Title]]">
           Link to another note by its title or filename (case-insensitive). Click it to jump there.
-          The note you link to lists it under <strong>Linked references</strong>.
+          Every note lists what points at it under <strong>Linked references</strong> — each one
+          shown with the line it appears in, sorted alphabetically.
+        </Row>
+        <Row code="[[A topic with no note yet]]">
+          You can link to something before you&apos;ve written it. Clicking it opens a{' '}
+          <strong>topic page</strong> that gathers every reference to that name, with a button to
+          turn it into a real note whenever you&apos;re ready.
         </Row>
         <Row code="[[Note Title|as you like]]">Same link, shown with different text.</Row>
       </Section>

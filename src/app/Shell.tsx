@@ -11,7 +11,6 @@ const NAV: readonly { to: string; label: string; end: boolean }[] = [
   { to: '/files', label: 'Files', end: false },
   { to: '/tags', label: 'Tags', end: false },
   { to: '/library', label: 'Library', end: false },
-  { to: '/connections', label: 'Connections', end: false },
   { to: '/graph', label: 'Graph', end: false },
   { to: '/query-tracker', label: 'Query Tracker', end: false },
   { to: '/search', label: 'Search', end: false },

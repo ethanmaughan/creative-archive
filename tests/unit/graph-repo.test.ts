@@ -16,7 +16,7 @@ beforeEach(async () => {
 })
 
 describe('GraphRepository', () => {
-  it('unions wikilink + connection edges, deduped and undirected, skipping broken links', async () => {
+  it('builds undirected wikilink edges, deduped, skipping broken links', async () => {
     const fs = new MemoryFileStore({
       // A ↔ B via reciprocal wikilinks (should collapse to one undirected edge)
       'notebook/a.md': '---\nid: a\ntitle: A\n---\n[[B]] and [[Ghost]]\n', // Ghost is unresolved
@@ -24,17 +24,13 @@ describe('GraphRepository', () => {
       'notebook/c.md': '---\nid: c\ntitle: C\n---\nplain\n',
     })
     await reconcile(fs, db, { now })
-    // A manual connection B—C (not from files).
-    db.run(
-      "INSERT INTO connections (id, source_type, source_id, target_type, target_id, created_at) VALUES ('x','document','b','document','c','t');",
-    )
 
     const g = new GraphRepository(db).graph()
     expect(g.nodes.map((n) => n.id).sort()).toEqual(['a', 'b', 'c'])
-    // edges: {a,b} from the reciprocal wikilinks (deduped to one) + {b,c} from the connection.
-    // The broken [[Ghost]] contributes no edge.
+    // A↔B reciprocal wikilinks collapse to one undirected edge; the broken [[Ghost]] and the
+    // unlinked C contribute nothing.
     const pairs = g.edges.map((e) => [e.source, e.target].sort().join('-')).sort()
-    expect(pairs).toEqual(['a-b', 'b-c'])
+    expect(pairs).toEqual(['a-b'])
   })
 
   it('returns nodes with no edges when nothing is linked', async () => {

@@ -46,6 +46,6 @@ test('wikilinks connect notes and surface as backlinks', async ({ page }) => {
 
   // The target shows the backlink, and it navigates back to the source.
   await expect(page.getByText(/Linked references/)).toBeVisible({ timeout: 15_000 })
-  await page.locator('.conn').filter({ hasText: 'Source Note' }).click()
+  await page.locator('.ref__src').filter({ hasText: 'Source Note' }).click()
   await expect(page.getByRole('heading', { name: 'Source Note' })).toBeVisible({ timeout: 15_000 })
 })
