@@ -5,7 +5,8 @@ import {
   useCreateAgentManuscript,
   useSaveAgents,
 } from '@/data/worker/hooks'
-import { AGENT_STATUSES, type Agent, type AgentStatus } from '@/domain/models/agent'
+import { AGENT_STATUSES, isStale, type Agent, type AgentStatus } from '@/domain/models/agent'
+import { detectFormat, mergeNewAgents, parseImportedAgents } from '@/domain/services/agent-import'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { slugify } from '@/shared/slug'
@@ -243,6 +244,12 @@ export function AgentTracker(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all')
   const [adding, setAdding] = useState(false)
   const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [staleMonths, setStaleMonths] = useState(3)
+  const [importOpen, setImportOpen] = useState(false)
+  const [importText, setImportText] = useState('')
+  const [importMsg, setImportMsg] = useState<string | null>(null)
+  // A stable "now" for the session so staleness doesn't recompute on every render.
+  const [now] = useState(() => new Date())
 
   // Default to the first manuscript once the list loads.
   useEffect(() => {
@@ -280,6 +287,14 @@ export function AgentTracker(): JSX.Element {
       })
   }, [agents, search, statusFilter])
 
+  const stale = useMemo(
+    () =>
+      agents
+        .map((agent, index) => ({ agent, index }))
+        .filter(({ agent }) => isStale(agent, staleMonths, now)),
+    [agents, staleMonths, now],
+  )
+
   const createNewManuscript = (): void => {
     const s = slugify(newName)
     if (s === '') return
@@ -289,6 +304,32 @@ export function AgentTracker(): JSX.Element {
         setSlug(s)
       },
     })
+  }
+
+  const runImport = (): void => {
+    const text = importText.trim()
+    if (text === '') return
+    try {
+      const incoming = parseImportedAgents(text, detectFormat(text))
+      if (incoming.length === 0) {
+        setImportMsg('No agents found in that data.')
+        return
+      }
+      const today = now.toISOString().slice(0, 10)
+      const { added, skipped } = mergeNewAgents(agents, incoming, today)
+      if (added.length > 0) persist([...agents, ...added])
+      const skipNote =
+        skipped > 0 ? `, skipped ${skipped} duplicate${skipped === 1 ? '' : 's'}` : ''
+      setImportMsg(`Imported ${added.length} new agent${added.length === 1 ? '' : 's'}${skipNote}.`)
+      setImportText('')
+    } catch (error) {
+      setImportMsg(`Couldn't parse that: ${error instanceof Error ? error.message : 'invalid data'}`)
+    }
+  }
+
+  const loadImportFile = (file: File | undefined): void => {
+    if (!file) return
+    void file.text().then((text) => setImportText(text))
   }
 
   return (
@@ -376,7 +417,96 @@ export function AgentTracker(): JSX.Element {
             >
               + Agent
             </Button>
+            <Button variant="ghost" onClick={() => setImportOpen((o) => !o)}>
+              Import…
+            </Button>
           </div>
+
+          {importOpen ? (
+            <div className="agent-form">
+              <p className="agent-import__hint">
+                Paste a JSON array (or a CSV export) of agents. New rows import as{' '}
+                <strong>unresearched</strong>; duplicates (same name + agency) are skipped. Nothing
+                is fetched from the web — this only reads what you paste or pick.
+              </p>
+              <textarea
+                className="agent-textarea agent-import__box"
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder='[{"name": "Chris Lotts", "agency": "The Lotts Agency", "genres": ["horror"]}]'
+                aria-label="Import data"
+              />
+              <div className="agent-form__actions">
+                <input
+                  type="file"
+                  accept=".json,.csv,.txt"
+                  onChange={(e) => loadImportFile(e.target.files?.[0])}
+                  aria-label="Import file"
+                />
+                <Button
+                  onClick={runImport}
+                  disabled={saveAgents.isPending || importText.trim() === ''}
+                >
+                  Import
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setImportOpen(false)
+                    setImportMsg(null)
+                  }}
+                >
+                  Close
+                </Button>
+              </div>
+              {importMsg ? <p className="agent-import__msg">{importMsg}</p> : null}
+            </div>
+          ) : null}
+
+          {stale.length > 0 ? (
+            <div className="agent-refresh">
+              <div className="agent-refresh__head">
+                <strong>Needs refresh · {stale.length}</strong>
+                <label className="agent-refresh__threshold">
+                  older than
+                  <select
+                    className="newdoc__select"
+                    value={staleMonths}
+                    onChange={(e) => setStaleMonths(Number(e.target.value))}
+                    aria-label="Staleness threshold in months"
+                  >
+                    <option value={1}>1 month</option>
+                    <option value={3}>3 months</option>
+                    <option value={6}>6 months</option>
+                    <option value={12}>12 months</option>
+                  </select>
+                </label>
+              </div>
+              <ul className="agent-refresh__list">
+                {stale.map(({ agent, index }) => (
+                  <li key={`stale-${index}-${agent.name}`}>
+                    <button
+                      type="button"
+                      className="agent__btn"
+                      onClick={() => {
+                        setEditIndex(index)
+                        setAdding(false)
+                      }}
+                    >
+                      {agent.name}
+                    </button>
+                    <span className="agent-refresh__date">
+                      checked {agent.statusLastChecked || 'never'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="page-sub" style={{ marginBottom: 0 }}>
+                Re-check each agent&apos;s page yourself, then update their status and date. The app
+                never fetches this for you.
+              </p>
+            </div>
+          ) : null}
 
           {adding ? (
             <AgentForm
@@ -391,7 +521,7 @@ export function AgentTracker(): JSX.Element {
           ) : null}
 
           {agents.length === 0 && !adding ? (
-            <p className="page-sub">No agents yet. Add one, or import your research list (soon).</p>
+            <p className="page-sub">No agents yet. Add one, or use Import to paste your research list.</p>
           ) : (
             <ul className="agent-list">
               {visible.map(({ agent, index }) => (
