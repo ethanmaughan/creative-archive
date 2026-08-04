@@ -6,7 +6,14 @@ test('agents are tracked per-manuscript in a CSV, filterable and editable', asyn
   await page.goto('/?e2e=1')
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory()
-    for (const dir of ['notebook', 'research', 'story-bible', 'spaces', 'library', 'query-tracker']) {
+    for (const dir of [
+      'notebook',
+      'research',
+      'story-bible',
+      'spaces',
+      'library',
+      'query-tracker',
+    ]) {
       await root.removeEntry(dir, { recursive: true }).catch(() => undefined)
     }
   })

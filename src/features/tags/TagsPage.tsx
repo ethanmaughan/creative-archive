@@ -45,9 +45,7 @@ export function TagsPage(): JSX.Element {
             onChange={(event) => setFilter(event.target.value)}
           />
           {shown.length === 0 ? (
-            <p className="page-sub">
-              No tags match “{filter.trim()}”.
-            </p>
+            <p className="page-sub">No tags match “{filter.trim()}”.</p>
           ) : (
             <div className="tag-cloud">
               {shown.map((tag) => (

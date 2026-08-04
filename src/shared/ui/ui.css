@@ -1001,6 +1001,121 @@
   font-size: 0.72rem;
   color: var(--faint);
 }
+
+/* view toggle (List / Pipeline) */
+.agent-viewtoggle {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 0.8rem;
+}
+.seg {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  padding: 0.35rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.seg + .seg {
+  border-left: 1px solid var(--line-strong);
+}
+.seg.is-active {
+  background: var(--accent);
+  color: var(--accent-contrast, #fff);
+}
+
+/* submission pipeline (kanban) */
+.pipeline {
+  display: flex;
+  gap: 0.7rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+  align-items: flex-start;
+}
+.pipeline__col {
+  flex: 0 0 220px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.6rem;
+}
+.pipeline__colhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--ink);
+  margin-bottom: 0.5rem;
+}
+.pipeline__count {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--faint);
+}
+.pipeline__cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.pipeline__card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  padding: 0.35rem 0.5rem;
+}
+.pipeline__name {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.pipeline__editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.pipeline__history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.4rem;
+}
+.pipeline__event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+}
+.pipeline__evstage {
+  font-weight: 600;
+  color: var(--ink);
+}
+.pipeline__evdate {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--faint);
+}
+.pipeline__evnote {
+  color: var(--muted);
+  width: 100%;
+}
+.pipeline__empty {
+  font-size: 0.78rem;
+  color: var(--faint);
+}
 .qt-markets {
   list-style: none;
   padding: 0;

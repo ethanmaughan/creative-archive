@@ -3,7 +3,12 @@ import { detectFormat, mergeNewAgents, parseImportedAgents } from './agent-impor
 import type { Agent } from '../models/agent'
 
 const SEED = JSON.stringify([
-  { name: 'Alexandra Levick', agency: 'Writers House', location: 'New York, NY', genres: ['horror'] },
+  {
+    name: 'Alexandra Levick',
+    agency: 'Writers House',
+    location: 'New York, NY',
+    genres: ['horror'],
+  },
   { name: 'Anne Tibbets', agency: 'Donald Maass Literary Agency', genres: ['horror'] },
 ])
 

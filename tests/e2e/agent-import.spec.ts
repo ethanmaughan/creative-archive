@@ -6,7 +6,14 @@ test('import agents from JSON, dedupe on re-import, and flag stale entries', asy
   await page.goto('/?e2e=1')
   await page.evaluate(async () => {
     const root = await navigator.storage.getDirectory()
-    for (const dir of ['notebook', 'research', 'story-bible', 'spaces', 'library', 'query-tracker']) {
+    for (const dir of [
+      'notebook',
+      'research',
+      'story-bible',
+      'spaces',
+      'library',
+      'query-tracker',
+    ]) {
       await root.removeEntry(dir, { recursive: true }).catch(() => undefined)
     }
   })
@@ -21,7 +28,12 @@ test('import agents from JSON, dedupe on re-import, and flag stale entries', asy
 
   const seed = JSON.stringify([
     { name: 'Chris Lotts', agency: 'The Lotts Agency', genres: ['horror'] },
-    { name: 'Ginger Clark', agency: 'Ginger Clark Literary', status: 'open', status_last_checked: '2020-01-01' },
+    {
+      name: 'Ginger Clark',
+      agency: 'Ginger Clark Literary',
+      status: 'open',
+      status_last_checked: '2020-01-01',
+    },
   ])
 
   // First import: both are new.
@@ -40,7 +52,9 @@ test('import agents from JSON, dedupe on re-import, and flag stale entries', asy
   // Re-importing the same data adds nothing and reports the skips.
   await page.getByLabel('Import data').fill(seed)
   await page.getByRole('button', { name: 'Import', exact: true }).click()
-  await expect(page.locator('.agent-import__msg')).toContainText('Imported 0 new agents, skipped 2 duplicates')
+  await expect(page.locator('.agent-import__msg')).toContainText(
+    'Imported 0 new agents, skipped 2 duplicates',
+  )
 
   // Both persisted to the CSV.
   const csv = await page.evaluate(async () => {

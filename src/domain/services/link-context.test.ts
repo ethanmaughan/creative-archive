@@ -6,7 +6,9 @@ describe('extractLinkContexts', () => {
 
   it('returns the line containing a matching wikilink', () => {
     const body = 'Intro paragraph.\nThis scene explores [[Determinism]] head-on.\nUnrelated.'
-    expect(extractLinkContexts(body, keys)).toEqual(['This scene explores [[Determinism]] head-on.'])
+    expect(extractLinkContexts(body, keys)).toEqual([
+      'This scene explores [[Determinism]] head-on.',
+    ])
   })
 
   it('matches case-insensitively via the normalized key', () => {

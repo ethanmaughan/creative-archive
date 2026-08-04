@@ -37,7 +37,11 @@ describe('agent record mapping', () => {
   })
 
   it('defaults an unknown status to unresearched and trims fields', () => {
-    const agent = recordToAgent({ name: '  Zoë Plant ', agency: 'The Bent Agency', status: 'weird' })
+    const agent = recordToAgent({
+      name: '  Zoë Plant ',
+      agency: 'The Bent Agency',
+      status: 'weird',
+    })
     expect(agent.name).toBe('Zoë Plant')
     expect(agent.status).toBe('unresearched')
     expect(agent.genres).toEqual([])
