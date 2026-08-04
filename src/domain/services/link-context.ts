@@ -11,11 +11,7 @@ import { wikilinkKey } from './parse-wikilinks'
 
 const WIKILINK = /\[\[([^[\]|]+)(?:\|[^[\]]+)?\]\]/g
 
-export function extractLinkContexts(
-  body: string,
-  keys: ReadonlySet<string>,
-  max = 5,
-): string[] {
+export function extractLinkContexts(body: string, keys: ReadonlySet<string>, max = 5): string[] {
   if (keys.size === 0) return []
   const out: string[] = []
   const seen = new Set<string>()

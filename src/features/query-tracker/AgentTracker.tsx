@@ -7,6 +7,7 @@ import {
 } from '@/data/worker/hooks'
 import { AGENT_STATUSES, isStale, type Agent, type AgentStatus } from '@/domain/models/agent'
 import { detectFormat, mergeNewAgents, parseImportedAgents } from '@/domain/services/agent-import'
+import { SubmissionPipeline } from './SubmissionPipeline'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { slugify } from '@/shared/slug'
@@ -221,7 +222,10 @@ function AgentForm({
         </label>
       </div>
       <div className="agent-form__actions">
-        <Button onClick={() => onSave(draftToAgent(draft))} disabled={busy || draft.name.trim() === ''}>
+        <Button
+          onClick={() => onSave(draftToAgent(draft))}
+          disabled={busy || draft.name.trim() === ''}
+        >
           Save agent
         </Button>
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
@@ -244,6 +248,7 @@ export function AgentTracker(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all')
   const [adding, setAdding] = useState(false)
   const [editIndex, setEditIndex] = useState<number | null>(null)
+  const [view, setView] = useState<'list' | 'pipeline'>('list')
   const [staleMonths, setStaleMonths] = useState(3)
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
@@ -323,7 +328,9 @@ export function AgentTracker(): JSX.Element {
       setImportMsg(`Imported ${added.length} new agent${added.length === 1 ? '' : 's'}${skipNote}.`)
       setImportText('')
     } catch (error) {
-      setImportMsg(`Couldn't parse that: ${error instanceof Error ? error.message : 'invalid data'}`)
+      setImportMsg(
+        `Couldn't parse that: ${error instanceof Error ? error.message : 'invalid data'}`,
+      )
     }
   }
 
@@ -348,7 +355,9 @@ export function AgentTracker(): JSX.Element {
           aria-label="Manuscript"
           disabled={!manuscripts || manuscripts.length === 0}
         >
-          {(!manuscripts || manuscripts.length === 0) && <option value="">No manuscripts yet</option>}
+          {(!manuscripts || manuscripts.length === 0) && (
+            <option value="">No manuscripts yet</option>
+          )}
           {manuscripts?.map((m) => (
             <option key={m} value={m}>
               {m}
@@ -378,197 +387,134 @@ export function AgentTracker(): JSX.Element {
       ) : slug === null ? (
         <p className="page-sub">
           Create a manuscript above to start tracking agents. Each one is a{' '}
-          <code>query-tracker/&lt;name&gt;.agents.csv</code> file in your archive folder — open it in
-          a spreadsheet anytime.
+          <code>query-tracker/&lt;name&gt;.agents.csv</code> file in your archive folder — open it
+          in a spreadsheet anytime.
         </p>
       ) : (
         <>
-          <div className="agent-filter">
-            <input
-              className="tag-search"
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search name, agency, notes, tags…"
-              aria-label="Search agents"
-            />
-            <select
-              className="newdoc__select"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as AgentStatus | 'all')}
-              aria-label="Filter by status"
+          <div className="agent-viewtoggle">
+            <button
+              type="button"
+              className={`seg${view === 'list' ? ' is-active' : ''}`}
+              onClick={() => setView('list')}
             >
-              <option value="all">All statuses</option>
-              {AGENT_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABEL[s]}
-                </option>
-              ))}
-            </select>
-            <span className="agent-count">
-              {visible.length} / {agents.length}
-            </span>
-            <Button
-              onClick={() => {
-                setAdding(true)
-                setEditIndex(null)
-              }}
-              disabled={adding}
+              List
+            </button>
+            <button
+              type="button"
+              className={`seg${view === 'pipeline' ? ' is-active' : ''}`}
+              onClick={() => setView('pipeline')}
             >
-              + Agent
-            </Button>
-            <Button variant="ghost" onClick={() => setImportOpen((o) => !o)}>
-              Import…
-            </Button>
+              Pipeline
+            </button>
           </div>
 
-          {importOpen ? (
-            <div className="agent-form">
-              <p className="agent-import__hint">
-                Paste a JSON array (or a CSV export) of agents. New rows import as{' '}
-                <strong>unresearched</strong>; duplicates (same name + agency) are skipped. Nothing
-                is fetched from the web — this only reads what you paste or pick.
-              </p>
-              <textarea
-                className="agent-textarea agent-import__box"
-                value={importText}
-                onChange={(e) => setImportText(e.target.value)}
-                placeholder='[{"name": "Chris Lotts", "agency": "The Lotts Agency", "genres": ["horror"]}]'
-                aria-label="Import data"
-              />
-              <div className="agent-form__actions">
+          {view === 'pipeline' ? (
+            <SubmissionPipeline slug={slug} agentNames={agents.map((a) => a.name)} />
+          ) : (
+            <>
+              <div className="agent-filter">
                 <input
-                  type="file"
-                  accept=".json,.csv,.txt"
-                  onChange={(e) => loadImportFile(e.target.files?.[0])}
-                  aria-label="Import file"
+                  className="tag-search"
+                  type="search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search name, agency, notes, tags…"
+                  aria-label="Search agents"
                 />
-                <Button
-                  onClick={runImport}
-                  disabled={saveAgents.isPending || importText.trim() === ''}
+                <select
+                  className="newdoc__select"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as AgentStatus | 'all')}
+                  aria-label="Filter by status"
                 >
-                  Import
-                </Button>
+                  <option value="all">All statuses</option>
+                  {AGENT_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABEL[s]}
+                    </option>
+                  ))}
+                </select>
+                <span className="agent-count">
+                  {visible.length} / {agents.length}
+                </span>
                 <Button
-                  variant="ghost"
                   onClick={() => {
-                    setImportOpen(false)
-                    setImportMsg(null)
+                    setAdding(true)
+                    setEditIndex(null)
                   }}
+                  disabled={adding}
                 >
-                  Close
+                  + Agent
+                </Button>
+                <Button variant="ghost" onClick={() => setImportOpen((o) => !o)}>
+                  Import…
                 </Button>
               </div>
-              {importMsg ? <p className="agent-import__msg">{importMsg}</p> : null}
-            </div>
-          ) : null}
 
-          {stale.length > 0 ? (
-            <div className="agent-refresh">
-              <div className="agent-refresh__head">
-                <strong>Needs refresh · {stale.length}</strong>
-                <label className="agent-refresh__threshold">
-                  older than
-                  <select
-                    className="newdoc__select"
-                    value={staleMonths}
-                    onChange={(e) => setStaleMonths(Number(e.target.value))}
-                    aria-label="Staleness threshold in months"
-                  >
-                    <option value={1}>1 month</option>
-                    <option value={3}>3 months</option>
-                    <option value={6}>6 months</option>
-                    <option value={12}>12 months</option>
-                  </select>
-                </label>
-              </div>
-              <ul className="agent-refresh__list">
-                {stale.map(({ agent, index }) => (
-                  <li key={`stale-${index}-${agent.name}`}>
-                    <button
-                      type="button"
-                      className="agent__btn"
+              {importOpen ? (
+                <div className="agent-form">
+                  <p className="agent-import__hint">
+                    Paste a JSON array (or a CSV export) of agents. New rows import as{' '}
+                    <strong>unresearched</strong>; duplicates (same name + agency) are skipped.
+                    Nothing is fetched from the web — this only reads what you paste or pick.
+                  </p>
+                  <textarea
+                    className="agent-textarea agent-import__box"
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    placeholder='[{"name": "Chris Lotts", "agency": "The Lotts Agency", "genres": ["horror"]}]'
+                    aria-label="Import data"
+                  />
+                  <div className="agent-form__actions">
+                    <input
+                      type="file"
+                      accept=".json,.csv,.txt"
+                      onChange={(e) => loadImportFile(e.target.files?.[0])}
+                      aria-label="Import file"
+                    />
+                    <Button
+                      onClick={runImport}
+                      disabled={saveAgents.isPending || importText.trim() === ''}
+                    >
+                      Import
+                    </Button>
+                    <Button
+                      variant="ghost"
                       onClick={() => {
-                        setEditIndex(index)
-                        setAdding(false)
+                        setImportOpen(false)
+                        setImportMsg(null)
                       }}
                     >
-                      {agent.name}
-                    </button>
-                    <span className="agent-refresh__date">
-                      checked {agent.statusLastChecked || 'never'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="page-sub" style={{ marginBottom: 0 }}>
-                Re-check each agent&apos;s page yourself, then update their status and date. The app
-                never fetches this for you.
-              </p>
-            </div>
-          ) : null}
+                      Close
+                    </Button>
+                  </div>
+                  {importMsg ? <p className="agent-import__msg">{importMsg}</p> : null}
+                </div>
+              ) : null}
 
-          {adding ? (
-            <AgentForm
-              initial={emptyDraft()}
-              busy={saveAgents.isPending}
-              onCancel={() => setAdding(false)}
-              onSave={(agent) => {
-                persist([...agents, agent])
-                setAdding(false)
-              }}
-            />
-          ) : null}
-
-          {agents.length === 0 && !adding ? (
-            <p className="page-sub">No agents yet. Add one, or use Import to paste your research list.</p>
-          ) : (
-            <ul className="agent-list">
-              {visible.map(({ agent, index }) => (
-                <li className="agent" key={`${index}-${agent.name}`}>
-                  {editIndex === index ? (
-                    <AgentForm
-                      initial={agentToDraft(agent)}
-                      busy={saveAgents.isPending}
-                      onCancel={() => setEditIndex(null)}
-                      onSave={(next) => {
-                        const updated = agents.slice()
-                        updated[index] = next
-                        persist(updated)
-                        setEditIndex(null)
-                      }}
-                    />
-                  ) : (
-                    <>
-                      <div className="agent__main">
-                        <div className="agent__title">
-                          {agent.name}
-                          <span className={`chip chip--sm status--${agent.status}`}>
-                            {STATUS_LABEL[agent.status]}
-                          </span>
-                        </div>
-                        <div className="agent__meta">
-                          {[agent.agency, agent.location].filter(Boolean).join(' · ')}
-                        </div>
-                        {agent.genres.length > 0 || agent.tags.length > 0 ? (
-                          <div className="agent__chips">
-                            {agent.genres.map((g) => (
-                              <span key={`g-${g}`} className="tag-chip">
-                                {g}
-                              </span>
-                            ))}
-                            {agent.tags.map((t) => (
-                              <span key={`t-${t}`} className="tag-chip tag-chip--tag">
-                                #{t}
-                              </span>
-                            ))}
-                          </div>
-                        ) : null}
-                        {agent.personalFitNotes.trim() !== '' ? (
-                          <div className="agent__notes">{agent.personalFitNotes}</div>
-                        ) : null}
-                      </div>
-                      <div className="agent__actions">
+              {stale.length > 0 ? (
+                <div className="agent-refresh">
+                  <div className="agent-refresh__head">
+                    <strong>Needs refresh · {stale.length}</strong>
+                    <label className="agent-refresh__threshold">
+                      older than
+                      <select
+                        className="newdoc__select"
+                        value={staleMonths}
+                        onChange={(e) => setStaleMonths(Number(e.target.value))}
+                        aria-label="Staleness threshold in months"
+                      >
+                        <option value={1}>1 month</option>
+                        <option value={3}>3 months</option>
+                        <option value={6}>6 months</option>
+                        <option value={12}>12 months</option>
+                      </select>
+                    </label>
+                  </div>
+                  <ul className="agent-refresh__list">
+                    {stale.map(({ agent, index }) => (
+                      <li key={`stale-${index}-${agent.name}`}>
                         <button
                           type="button"
                           className="agent__btn"
@@ -577,21 +523,109 @@ export function AgentTracker(): JSX.Element {
                             setAdding(false)
                           }}
                         >
-                          Edit
+                          {agent.name}
                         </button>
-                        <button
-                          type="button"
-                          className="agent__btn agent__btn--danger"
-                          onClick={() => persist(agents.filter((_, i) => i !== index))}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
+                        <span className="agent-refresh__date">
+                          checked {agent.statusLastChecked || 'never'}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="page-sub" style={{ marginBottom: 0 }}>
+                    Re-check each agent&apos;s page yourself, then update their status and date. The
+                    app never fetches this for you.
+                  </p>
+                </div>
+              ) : null}
+
+              {adding ? (
+                <AgentForm
+                  initial={emptyDraft()}
+                  busy={saveAgents.isPending}
+                  onCancel={() => setAdding(false)}
+                  onSave={(agent) => {
+                    persist([...agents, agent])
+                    setAdding(false)
+                  }}
+                />
+              ) : null}
+
+              {agents.length === 0 && !adding ? (
+                <p className="page-sub">
+                  No agents yet. Add one, or use Import to paste your research list.
+                </p>
+              ) : (
+                <ul className="agent-list">
+                  {visible.map(({ agent, index }) => (
+                    <li className="agent" key={`${index}-${agent.name}`}>
+                      {editIndex === index ? (
+                        <AgentForm
+                          initial={agentToDraft(agent)}
+                          busy={saveAgents.isPending}
+                          onCancel={() => setEditIndex(null)}
+                          onSave={(next) => {
+                            const updated = agents.slice()
+                            updated[index] = next
+                            persist(updated)
+                            setEditIndex(null)
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <div className="agent__main">
+                            <div className="agent__title">
+                              {agent.name}
+                              <span className={`chip chip--sm status--${agent.status}`}>
+                                {STATUS_LABEL[agent.status]}
+                              </span>
+                            </div>
+                            <div className="agent__meta">
+                              {[agent.agency, agent.location].filter(Boolean).join(' · ')}
+                            </div>
+                            {agent.genres.length > 0 || agent.tags.length > 0 ? (
+                              <div className="agent__chips">
+                                {agent.genres.map((g) => (
+                                  <span key={`g-${g}`} className="tag-chip">
+                                    {g}
+                                  </span>
+                                ))}
+                                {agent.tags.map((t) => (
+                                  <span key={`t-${t}`} className="tag-chip tag-chip--tag">
+                                    #{t}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                            {agent.personalFitNotes.trim() !== '' ? (
+                              <div className="agent__notes">{agent.personalFitNotes}</div>
+                            ) : null}
+                          </div>
+                          <div className="agent__actions">
+                            <button
+                              type="button"
+                              className="agent__btn"
+                              onClick={() => {
+                                setEditIndex(index)
+                                setAdding(false)
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="agent__btn agent__btn--danger"
+                              onClick={() => persist(agents.filter((_, i) => i !== index))}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
           )}
         </>
       )}

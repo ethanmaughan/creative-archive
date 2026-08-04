@@ -1,6 +1,7 @@
 /** The typed contract between the UI (main thread) and the data worker. */
 import type { FileStore } from '@/data/storage/file-store/file-store'
 import type { Agent } from '@/domain/models/agent'
+import type { SubmissionEvent } from '@/domain/models/submission-log'
 import type { MediaType } from '@/domain/models/document'
 import type { SpaceDocKind, SpaceType } from '@/domain/models/space'
 import type { MarketKind } from '@/domain/models/market'
@@ -291,6 +292,10 @@ export interface DataApi {
   saveAgents(slug: string, agents: Agent[]): Promise<void>
   /** Query tracker — create an empty agents CSV for a new manuscript slug (no-op if it exists). */
   createAgentManuscript(slug: string): Promise<void>
+  /** Query tracker — the append-only submission status log for a manuscript. */
+  listSubmissionLog(slug: string): Promise<SubmissionEvent[]>
+  /** Query tracker — append one status-change event to the manuscript's submission log. */
+  appendSubmissionLog(slug: string, event: SubmissionEvent): Promise<void>
   /** Whether local AI (Ollama) is reachable. */
   aiStatus(): Promise<AiStatus>
   /** Summarize a document; writes the summary into a writable workspace. */

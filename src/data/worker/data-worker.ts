@@ -53,6 +53,13 @@ import {
   recordToAgent,
   type Agent,
 } from '@/domain/models/agent'
+import {
+  SUBMISSION_COLUMNS,
+  eventToRecord,
+  recordToEvent,
+  submissionsCsvPath,
+  type SubmissionEvent,
+} from '@/domain/models/submission-log'
 import { parseCsvRecords, recordsToCsv } from '@/shared/csv'
 import { slugify } from '@/shared/slug'
 import { buildSnippet, queryTerms, toFtsQuery } from './fts-query'
@@ -443,7 +450,11 @@ const api: DataApi = {
     if (!links || !documents || !store) return []
     const doc = documents.all().find((d) => d.id === documentId)
     if (!doc) return []
-    return buildReferences(store, links.referencesTo(documentId), targetKeys(doc.title, doc.relPath))
+    return buildReferences(
+      store,
+      links.referencesTo(documentId),
+      targetKeys(doc.title, doc.relPath),
+    )
   },
 
   async topicPage(name: string): Promise<TopicPageDTO> {
@@ -546,6 +557,37 @@ const api: DataApi = {
     const path = agentsCsvPath(slug)
     if (await open.store.stat(path)) return
     await open.store.writeTextFile(path, recordsToCsv(AGENT_COLUMNS, []))
+  },
+
+  async listSubmissionLog(slug: string): Promise<SubmissionEvent[]> {
+    if (!store) return []
+    let raw: string
+    try {
+      raw = await store.readTextFile(submissionsCsvPath(slug))
+    } catch {
+      return []
+    }
+    return parseCsvRecords(raw)
+      .map(recordToEvent)
+      .filter((event) => event.agentName !== '')
+  },
+
+  async appendSubmissionLog(slug: string, event: SubmissionEvent): Promise<void> {
+    const open = requireOpen()
+    const path = submissionsCsvPath(slug)
+    let events: SubmissionEvent[] = []
+    try {
+      events = parseCsvRecords(await open.store.readTextFile(path))
+        .map(recordToEvent)
+        .filter((e) => e.agentName !== '')
+    } catch {
+      // No log yet — start a new one.
+    }
+    events.push(event)
+    await open.store.writeTextFile(
+      path,
+      recordsToCsv(SUBMISSION_COLUMNS, events.map(eventToRecord)),
+    )
   },
 
   async aiStatus() {

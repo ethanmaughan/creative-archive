@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-query'
 import { useSession } from '@/app/store/session'
 import type { Agent } from '@/domain/models/agent'
+import type { SubmissionEvent } from '@/domain/models/submission-log'
 import type { SubmissionStatus } from '@/domain/models/submission'
 import { getDataClient } from './data-client'
 import type {
@@ -284,6 +285,30 @@ export function useCreateAgentManuscript(): UseMutationResult<void, Error, strin
     mutationFn: (slug: string) => getDataClient().createAgentManuscript(slug),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['agent-manuscripts'] })
+    },
+  })
+}
+
+export function useSubmissionLog(slug: string | null): UseQueryResult<SubmissionEvent[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['submission-log', slug],
+    queryFn: () => getDataClient().listSubmissionLog(slug as string),
+    enabled: ready && slug !== null && slug.length > 0,
+  })
+}
+
+export function useAppendSubmissionLog(): UseMutationResult<
+  void,
+  Error,
+  { slug: string; event: SubmissionEvent }
+> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ slug, event }: { slug: string; event: SubmissionEvent }) =>
+      getDataClient().appendSubmissionLog(slug, event),
+    onSuccess: (_data, { slug }) => {
+      void queryClient.invalidateQueries({ queryKey: ['submission-log', slug] })
     },
   })
 }

@@ -23,7 +23,10 @@ function str(value: unknown): string {
 
 function toList(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.filter((v): v is string => typeof v === 'string').map((s) => s.trim()).filter(Boolean)
+    return value
+      .filter((v): v is string => typeof v === 'string')
+      .map((s) => s.trim())
+      .filter(Boolean)
   }
   if (typeof value === 'string') {
     return value

@@ -21,7 +21,9 @@ test('an un-filed [[topic]] gets a topic page with contextual references, then b
   await page.getByRole('button', { name: '+ New' }).click()
   await page.getByLabel('New document title').fill('Ideas Journal')
   await page.getByRole('button', { name: 'Create', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Ideas Journal' })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('heading', { name: 'Ideas Journal' })).toBeVisible({
+    timeout: 15_000,
+  })
 
   const editor = page.locator('.prose-editor .ProseMirror')
   await editor.click()
