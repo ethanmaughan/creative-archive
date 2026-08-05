@@ -60,6 +60,13 @@ import {
   submissionsCsvPath,
   type SubmissionEvent,
 } from '@/domain/models/submission-log'
+import {
+  TEMPLATE_COLUMNS,
+  TEMPLATES_CSV_PATH,
+  recordToTemplate,
+  templateToRecord,
+  type QueryTemplate,
+} from '@/domain/models/query-template'
 import { parseCsvRecords, recordsToCsv } from '@/shared/csv'
 import { slugify } from '@/shared/slug'
 import { buildSnippet, queryTerms, toFtsQuery } from './fts-query'
@@ -587,6 +594,27 @@ const api: DataApi = {
     await open.store.writeTextFile(
       path,
       recordsToCsv(SUBMISSION_COLUMNS, events.map(eventToRecord)),
+    )
+  },
+
+  async listTemplates(): Promise<QueryTemplate[]> {
+    if (!store) return []
+    let raw: string
+    try {
+      raw = await store.readTextFile(TEMPLATES_CSV_PATH)
+    } catch {
+      return []
+    }
+    return parseCsvRecords(raw)
+      .map(recordToTemplate)
+      .filter((template) => template.name !== '')
+  },
+
+  async saveTemplates(templates: QueryTemplate[]): Promise<void> {
+    const open = requireOpen()
+    await open.store.writeTextFile(
+      TEMPLATES_CSV_PATH,
+      recordsToCsv(TEMPLATE_COLUMNS, templates.map(templateToRecord)),
     )
   },
 

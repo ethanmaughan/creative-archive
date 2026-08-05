@@ -2,6 +2,7 @@
 import type { FileStore } from '@/data/storage/file-store/file-store'
 import type { Agent } from '@/domain/models/agent'
 import type { SubmissionEvent } from '@/domain/models/submission-log'
+import type { QueryTemplate } from '@/domain/models/query-template'
 import type { MediaType } from '@/domain/models/document'
 import type { SpaceDocKind, SpaceType } from '@/domain/models/space'
 import type { MarketKind } from '@/domain/models/market'
@@ -296,6 +297,10 @@ export interface DataApi {
   listSubmissionLog(slug: string): Promise<SubmissionEvent[]>
   /** Query tracker — append one status-change event to the manuscript's submission log. */
   appendSubmissionLog(slug: string, event: SubmissionEvent): Promise<void>
+  /** Query tracker — reusable query-letter templates (shared across manuscripts). */
+  listTemplates(): Promise<QueryTemplate[]>
+  /** Query tracker — write the full template list back to templates.csv. */
+  saveTemplates(templates: QueryTemplate[]): Promise<void>
   /** Whether local AI (Ollama) is reachable. */
   aiStatus(): Promise<AiStatus>
   /** Summarize a document; writes the summary into a writable workspace. */

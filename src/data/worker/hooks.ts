@@ -8,6 +8,7 @@ import {
 import { useSession } from '@/app/store/session'
 import type { Agent } from '@/domain/models/agent'
 import type { SubmissionEvent } from '@/domain/models/submission-log'
+import type { QueryTemplate } from '@/domain/models/query-template'
 import type { SubmissionStatus } from '@/domain/models/submission'
 import { getDataClient } from './data-client'
 import type {
@@ -309,6 +310,25 @@ export function useAppendSubmissionLog(): UseMutationResult<
       getDataClient().appendSubmissionLog(slug, event),
     onSuccess: (_data, { slug }) => {
       void queryClient.invalidateQueries({ queryKey: ['submission-log', slug] })
+    },
+  })
+}
+
+export function useTemplates(): UseQueryResult<QueryTemplate[]> {
+  const ready = useSession((s) => s.status === 'ready')
+  return useQuery({
+    queryKey: ['query-templates'],
+    queryFn: () => getDataClient().listTemplates(),
+    enabled: ready,
+  })
+}
+
+export function useSaveTemplates(): UseMutationResult<void, Error, QueryTemplate[]> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (templates: QueryTemplate[]) => getDataClient().saveTemplates(templates),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['query-templates'] })
     },
   })
 }

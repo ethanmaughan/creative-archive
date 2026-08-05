@@ -1116,6 +1116,26 @@
   font-size: 0.78rem;
   color: var(--faint);
 }
+
+/* query drafter */
+.drafter__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+.drafter__templates {
+  margin-bottom: 1rem;
+}
+.drafter__box {
+  width: 100%;
+  min-height: 320px;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
 .qt-markets {
   list-style: none;
   padding: 0;

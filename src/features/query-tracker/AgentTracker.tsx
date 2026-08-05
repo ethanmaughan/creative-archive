@@ -8,6 +8,7 @@ import {
 import { AGENT_STATUSES, isStale, type Agent, type AgentStatus } from '@/domain/models/agent'
 import { detectFormat, mergeNewAgents, parseImportedAgents } from '@/domain/services/agent-import'
 import { SubmissionPipeline } from './SubmissionPipeline'
+import { QueryDrafter } from './QueryDrafter'
 import { Button } from '@/shared/ui/Button'
 import { Spinner } from '@/shared/ui/Spinner'
 import { slugify } from '@/shared/slug'
@@ -248,7 +249,7 @@ export function AgentTracker(): JSX.Element {
   const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all')
   const [adding, setAdding] = useState(false)
   const [editIndex, setEditIndex] = useState<number | null>(null)
-  const [view, setView] = useState<'list' | 'pipeline'>('list')
+  const [view, setView] = useState<'list' | 'pipeline' | 'draft'>('list')
   const [staleMonths, setStaleMonths] = useState(3)
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
@@ -407,10 +408,19 @@ export function AgentTracker(): JSX.Element {
             >
               Pipeline
             </button>
+            <button
+              type="button"
+              className={`seg${view === 'draft' ? ' is-active' : ''}`}
+              onClick={() => setView('draft')}
+            >
+              Draft
+            </button>
           </div>
 
           {view === 'pipeline' ? (
             <SubmissionPipeline slug={slug} agentNames={agents.map((a) => a.name)} />
+          ) : view === 'draft' ? (
+            <QueryDrafter agents={agents} />
           ) : (
             <>
               <div className="agent-filter">
